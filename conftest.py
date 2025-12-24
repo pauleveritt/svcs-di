@@ -11,15 +11,18 @@ from sybil import Sybil
 from sybil.parsers.myst import PythonCodeBlockParser
 from sybil.parsers.rest import DocTestParser
 
-
-# Configure Sybil for src/ Python files (minimal globals)
+# Configure Sybil for src/ Python files
+# Note: auto.py excluded because its doctests are narrative multi-line examples
+# that don't work with Sybil's line-by-line execution model
 _sybil_src = Sybil(
     parsers=[DocTestParser()],
     patterns=["*.py"],
     path="src",
+    excludes=["**/auto.py"],
+    fixtures=[],
 )
 
-# Configure Sybil for README.md (comprehensive globals)
+# Configure Sybil for README.md
 _sybil_readme = Sybil(
     parsers=[PythonCodeBlockParser()],
     patterns=["README.md"],

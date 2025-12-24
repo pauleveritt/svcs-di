@@ -5,6 +5,8 @@
 - We have a checkout of `svcs` itself in `/Users/pauleveritt/PycharmProjects/svcs/`
 - An initial attempt at DI for `svcs` is below
 - Earlier package for DI called `hopscotch` is at `/Users/pauleveritt/projects/pauleveritt/hopscotch`
+- A [discussion about injection](https://github.com/hynek/svcs/discussions/94) that captures some of what Hynek might
+  accept
 
 ## Goals
 
@@ -15,10 +17,11 @@
 - Uses the most-modern type hinting features available in Python 3.12+
 - Support Python protocols
 - Works with free threaded Python
-- Target dataclasses can have a special method `__svcs__` that governs construction (similar to `__hopscotch_factory__` in Hopscotch)
+- Target dataclasses can have a special method `__svcs__` that governs construction (similar to `__hopscotch_factory__`
+  in Hopscotch)
 - Working examples under `examples`
-  - With tests for the examples under `tests`
-  - And docs for the examples in `docs/examples/*.md`
+    - With tests for the examples under `tests`
+    - And docs for the examples in `docs/examples/*.md`
 
 ## Nice-to-have
 
@@ -27,15 +30,15 @@
     - Special dataclass field support that allows extra features such as operators
     - Operator support on function and dataclass callables, but re-imagine a different approach (perhaps generics)
       instead of constructing an instance at import time
-- This multiple-registrations resolution should work with context-specific registrations [as done in Hopscotch](https://hopscotch.readthedocs.io/en/latest/registry.html#context)
-  - Bring over the precedence system in Hopscotch, but with a much-better implementation that fits `svcs`
-  - Put these nice-to-haves in an optional part of the package, the core `svcs_di` should be very minimal
+- This multiple-registrations resolution should work with context-specific
+  registrations [as done in Hopscotch](https://hopscotch.readthedocs.io/en/latest/registry.html#context)
+    - Bring over the precedence system in Hopscotch, but with a much-better implementation that fits `svcs`
+    - Put these nice-to-haves in an optional part of the package, the core `svcs_di` should be very minimal
 - A minimal port of [venusian][~/PycharmProjects/venusian/]
-  - Leave out a bunch of features
-  - Hardwired to the registry, uses a container
-  - Doesn't need to support categories or advanced features
-  - Uses modern Python 3.12+ features for package discovery, walking directory trees, etc.
-
+    - Leave out a bunch of features
+    - Hardwired to the registry, uses a container
+    - Doesn't need to support categories or advanced features
+    - Uses modern Python 3.12+ features for package discovery, walking directory trees, etc.
 
 ## Initial svcs+di for multiple registrations
 

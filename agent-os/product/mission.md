@@ -96,6 +96,37 @@ registrations, operators, scanning) are optional modules, so you only pay for wh
 We extend the battle-tested `svcs` library rather than creating yet another DI framework. If you're already using
 `svcs`, you can adopt svcs-di incrementally without rewriting your application.
 
+## Design Principles from Upstream Discussion
+
+Based on [GitHub Discussion #94](https://github.com/hynek/svcs/discussions/94) with svcs maintainer Hynek Schlawack:
+
+### Core Upstream-Acceptable Feature
+
+The most likely feature to be accepted into svcs itself would be a minimal helper method for automatic dependency
+resolution:
+
+- **Example API:** `registry.register_factory(Wrapper, svcs.auto(Wrapper))`
+- **Scope:** Single module, no imports beyond Python stdlib and svcs
+- **Philosophy:** Optional helper that maintains svcs' non-magical approach
+- **Key constraint:** Provides convenience without forcing complexity
+
+### svcs-di Extended Features
+
+Everything beyond the minimal `svcs.auto()` helper should remain in svcs-di as optional extensions:
+
+- Context-aware resolution (location, tenant, user type)
+- Multiple registrations with precedence
+- Scanning/auto-discovery
+- Field operators and custom construction patterns
+
+### Implementation Constraints for Upstream Compatibility
+
+1. **Keep an escape hatch:** Users should always be able to write custom factory methods
+2. **Handle sync/async:** Support both synchronous and asynchronous dependency resolution
+3. **Support defaults:** Work with functions/classes that have default arguments
+4. **Minimal magic:** Type hints guide resolution but don't hide what's happening
+5. **Frozen implementation:** Core utilities should be stable and internal
+
 ## Key Features
 
 ### Core Features

@@ -1,0 +1,22 @@
+name: CI Tests
+
+on: [ push, pull_request ]
+
+jobs:
+  ci_tests:
+    name: python 3.14t (free-threaded)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.14t and uv
+        uses: ./.github/actions/setup-python-uv
+
+      - name: Install just
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+      - name: Run CI checks (including free-threading safety)
+        run: just ci-checks-ft

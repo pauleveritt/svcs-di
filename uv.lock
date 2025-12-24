@@ -36,6 +36,15 @@ wheels = [
 ]
 
 [[package]]
+name = "attrs"
+version = "25.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/5c/685e6633917e101e5dcb62b9dd76946cbb57c26e133bae9e0cd36033c0a9/attrs-25.4.0.tar.gz", hash = "sha256:16d5969b87f0859ef33a48b35d55ac1be6e42ae49d5e853b597db70c35c57e11", size = 934251, upload-time = "2025-10-06T13:54:44.725Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3a/2a/7cc015f5b9f5db42b7d48157e23356022889fc354a2813c15934b7cb5c0e/attrs-25.4.0-py3-none-any.whl", hash = "sha256:adcf7e2a1fb3b36ac48d97835bb6d8ade15b8dcce26aba8bf1d14847b57a3373", size = 67615, upload-time = "2025-10-06T13:54:43.17Z" },
+]
+
+[[package]]
 name = "babel"
 version = "2.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -379,15 +388,15 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-freethreaded"
-version = "0.1.0"
+name = "pytest-run-parallel"
+version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/09/3bf5fb5321463551787c41bd1af128c1eff018a55e1bb91af0501df54773/pytest_freethreaded-0.1.0.tar.gz", hash = "sha256:9cb4f412db3abb5a8ffdcb29a2d42e058c41f16437c0a1815101651b485dcf45", size = 6439, upload-time = "2024-10-03T09:09:56.817Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/8a/78e87e1fe30da28a4ea428e4e0bed4572aded9e45e2935582954e0991aa6/pytest_run_parallel-0.8.1.tar.gz", hash = "sha256:459f5fcf4cb63c64edbe48c74f68d6b41a217289e3e2f2d105d3175ddc0ada93", size = 66320, upload-time = "2025-12-23T16:21:24.127Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a6/e0/f379af92804357ac186d2d90ec73a1534183477de1e32e1a4f0bb86b85da/pytest_freethreaded-0.1.0-py3-none-any.whl", hash = "sha256:5f2beb6026857f274162d0aa131fe605b8c6d2a3b0c2d35a2af14721959398f1", size = 5286, upload-time = "2024-10-03T09:09:54.716Z" },
+    { url = "https://files.pythonhosted.org/packages/59/ee/771d301a74e066faddd16098deb1b25e287bd8508811a10acfc3b0c3636c/pytest_run_parallel-0.8.1-py3-none-any.whl", hash = "sha256:cc53bca80c7bf34ca88642cf0674ec79be5af61a8ba16fd2a9084ecd499b3d22", size = 19177, upload-time = "2025-12-23T16:21:22.97Z" },
 ]
 
 [[package]]
@@ -645,9 +654,24 @@ wheels = [
 ]
 
 [[package]]
+name = "svcs"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/08/e1/2d56ec21820cae24a6215dc1d6a224167b0e24368bf53166551064742e0d/svcs-25.1.0.tar.gz", hash = "sha256:64dd74d0c4e8fee79a9ac7550a9d824670b228df390ba1911614e29b59b3f2c2", size = 714086, upload-time = "2025-01-25T13:15:21.505Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/1c/a6b5d90a9ca479805798276728ccbbdff0c7228e2ea93b1f731779d635e3/svcs-25.1.0-py3-none-any.whl", hash = "sha256:df49cb7d1a05dfd2dd60af1a2cb84b9c3bb0a74728833cb8c54a7ceeecce6c97", size = 19456, upload-time = "2025-01-25T13:15:19.677Z" },
+]
+
+[[package]]
 name = "svcs-di"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "svcs" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -657,7 +681,7 @@ dev = [
     { name = "myst-parser" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "pytest-freethreaded" },
+    { name = "pytest-run-parallel" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "ruff" },
@@ -668,23 +692,24 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "svcs" }]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "coverage", specifier = ">=7.11.2" },
-    { name = "furo", specifier = ">=2024.8.6" },
+    { name = "coverage", specifier = ">=7.13.0" },
+    { name = "furo", specifier = ">=2025.12.19" },
     { name = "linkify-it-py", specifier = ">=2.0.3" },
-    { name = "myst-parser", specifier = ">=4.0.0" },
+    { name = "myst-parser" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-cov", specifier = ">=4.1.0" },
-    { name = "pytest-freethreaded", specifier = ">=0.1.0" },
+    { name = "pytest-run-parallel", specifier = ">=0.8.1" },
     { name = "pytest-timeout", specifier = ">=2.4.0" },
-    { name = "pytest-xdist", specifier = ">=3.6.1" },
-    { name = "ruff", specifier = ">=0.13.2" },
-    { name = "sphinx", specifier = ">=8.0.0" },
-    { name = "sphinx-autobuild", specifier = ">=2024.9.3" },
-    { name = "sybil", extras = ["pytest"], specifier = ">=8.0.0" },
-    { name = "ty", specifier = ">=0.0.4" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
+    { name = "ruff", specifier = ">=0.14.10" },
+    { name = "sphinx", specifier = ">=8" },
+    { name = "sphinx-autobuild", specifier = ">=2025.8.25" },
+    { name = "sybil", extras = ["pytest"], specifier = ">=8.4.2" },
+    { name = "ty", specifier = ">=0.0.6" },
 ]
 
 [[package]]

@@ -9,20 +9,20 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "coverage>=7.11.2",
-    "furo>=2024.8.6",
+    "coverage>=7.13.0",
+    "furo>=2025.12.19",
     "linkify-it-py>=2.0.3",
-    "myst-parser>=4.0.0",
+    "myst-parser",
     "pytest>=8.4.2",
     "pytest-cov>=4.1.0",
-    "pytest-freethreaded>=0.1.0",
+    "pytest-run-parallel>=0.8.1",
     "pytest-timeout>=2.4.0",
-    "pytest-xdist>=3.6.1",
-    "ruff>=0.13.2",
-    "sphinx>=8.0.0",
-    "sphinx-autobuild>=2024.9.3",
-    "sybil[pytest]>=8.0.0",
-    "ty>=0.0.4",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.14.10",
+    "sphinx>=8",
+    "sphinx-autobuild>=2025.8.25",
+    "sybil[pytest]>=8.4.2",
+    "ty>=0.0.6",
 ]
 
 [tool.pytest.ini_options]

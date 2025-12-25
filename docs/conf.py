@@ -20,7 +20,7 @@ extensions = [
     "sphinx.ext.viewcode",  # Add links to source code
     "sphinx.ext.todo",  # Support for to do items
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
-    "sphinxcontrib.mermaid",  # Mermaid diagram support
+    # "sphinxcontrib.mermaid",  # Mermaid diagram support - commented out, not in dependencies
 ]
 
 # MyST configuration for Markdown support

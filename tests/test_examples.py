@@ -1,10 +1,16 @@
 """Tests that verify all examples work correctly."""
 
+import asyncio
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 import pytest
+import svcs
+
+from svcs_di import Injectable, auto, auto_async, DefaultInjector
 
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
@@ -33,3 +39,437 @@ def test_example_runs_without_error(example_file):
 
     # All examples should produce some output
     assert result.stdout, f"Example {example_file.name} produced no output"
+
+
+def test_basic_dataclass_example():
+    """Test basic_dataclass.py produces expected output."""
+    result = subprocess.run(
+        [sys.executable, str(EXAMPLES_DIR / "basic_dataclass.py")],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Service created with timeout=30" in result.stdout
+    assert "Database host=localhost, port=5432" in result.stdout
+
+
+def test_kwargs_override_example():
+    """Test kwargs_override.py produces expected output."""
+    result = subprocess.run(
+        [sys.executable, str(EXAMPLES_DIR / "kwargs_override.py")],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Case 1: Normal usage" in result.stdout
+    assert "Case 2: Override timeout via factory" in result.stdout
+    assert "Case 3: Override db for testing" in result.stdout
+    assert "Timeout: 30" in result.stdout
+    assert "Timeout: 60" in result.stdout
+
+
+def test_protocol_injection_example():
+    """Test protocol_injection.py produces expected output."""
+    result = subprocess.run(
+        [sys.executable, str(EXAMPLES_DIR / "protocol_injection.py")],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Hello, World!" in result.stdout
+    assert "Hola, Mundo!" in result.stdout
+
+
+def test_async_injection_example():
+    """Test async_injection.py produces expected output."""
+    result = subprocess.run(
+        [sys.executable, str(EXAMPLES_DIR / "async_injection.py")],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Database initialized asynchronously" in result.stdout
+    assert "Service created:" in result.stdout
+    assert "Database:" in result.stdout
+    assert "Cache:" in result.stdout
+
+
+def test_custom_injector_example():
+    """Test custom_injector.py produces expected output."""
+    result = subprocess.run(
+        [sys.executable, str(EXAMPLES_DIR / "custom_injector.py")],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Example 1: Logging Injector" in result.stdout
+    assert "[INJECTOR] Creating instance of Service" in result.stdout
+    assert "[INJECTOR] Created Service successfully" in result.stdout
+    assert "Example 2: Validating Injector" in result.stdout
+    assert "Validation failed as expected" in result.stdout
+
+
+# ============================================================================
+# Strategic test coverage for critical edge cases and error conditions
+# ============================================================================
+
+
+def test_missing_dependency_raises_error():
+    """Test that missing Injectable dependency raises appropriate error.
+
+    Critical workflow: Attempting to resolve a service when its Injectable
+    dependency is not registered should fail with a clear error.
+    """
+    @dataclass
+    class Database:
+        host: str = "localhost"
+
+    @dataclass
+    class Service:
+        db: Injectable[Database]
+
+    registry = svcs.Registry()
+    # Intentionally NOT registering Database
+    registry.register_factory(Service, auto(Service))
+
+    container = svcs.Container(registry)
+
+    # Should raise ServiceNotFoundError when trying to inject Database
+    with pytest.raises(svcs.exceptions.ServiceNotFoundError):
+        container.get(Service)
+
+
+def test_multiple_injectable_dependencies():
+    """Test service with multiple Injectable parameters.
+
+    Critical workflow: Services often depend on multiple other services.
+    Verify all Injectable dependencies are resolved correctly.
+    """
+    @dataclass
+    class Database:
+        host: str = "db.example.com"
+
+    @dataclass
+    class Cache:
+        max_size: int = 100
+
+    @dataclass
+    class Logger:
+        level: str = "INFO"
+
+    @dataclass
+    class ComplexService:
+        db: Injectable[Database]
+        cache: Injectable[Cache]
+        logger: Injectable[Logger]
+        timeout: int = 30
+
+    registry = svcs.Registry()
+    registry.register_factory(Database, auto(Database))
+    registry.register_factory(Cache, auto(Cache))
+    registry.register_factory(Logger, auto(Logger))
+    registry.register_factory(ComplexService, auto(ComplexService))
+
+    container = svcs.Container(registry)
+    service = container.get(ComplexService)
+
+    assert service.db.host == "db.example.com"  # type: ignore[attr-defined]
+    assert service.cache.max_size == 100  # type: ignore[attr-defined]
+    assert service.logger.level == "INFO"  # type: ignore[attr-defined]
+    assert service.timeout == 30
+
+
+def test_kwargs_override_with_different_type():
+    """Test that kwargs override accepts different types (duck typing).
+
+    Edge case: When overriding an Injectable parameter via kwargs,
+    the override value should work regardless of exact type match,
+    as long as it's structurally compatible (duck typing).
+    """
+    @dataclass
+    class Database:
+        host: str
+
+    @dataclass
+    class MockDatabase:
+        host: str
+
+    @dataclass
+    class Service:
+        db: Injectable[Database]
+
+    # Create a production Database factory
+    def prod_db_factory():
+        return Database(host="prod")
+
+    registry = svcs.Registry()
+    registry.register_factory(Database, prod_db_factory)
+    registry.register_factory(Service, auto(Service))
+
+    container = svcs.Container(registry)
+
+    # Override with different type - should work with duck typing
+    mock_db = MockDatabase(host="mock")
+
+    def custom_factory(svcs_container):
+        return auto(Service)(svcs_container, db=mock_db)
+
+    registry2 = svcs.Registry()
+    registry2.register_factory(Service, custom_factory)
+
+    container2 = svcs.Container(registry2)
+    service = container2.get(Service)
+
+    assert service.db.host == "mock"
+
+
+def test_protocol_with_incompatible_implementation():
+    """Test protocol validation with runtime checks.
+
+    Edge case: Python's Protocol is structural, so type checkers validate
+    at compile time. At runtime, if an implementation is missing methods,
+    it will fail when those methods are called.
+    """
+    class ReaderProtocol(Protocol):
+        def read(self) -> str:
+            ...
+
+    class BrokenReader:
+        # Missing the read() method - not compatible
+        pass
+
+    @dataclass
+    class Service:
+        reader: Injectable[ReaderProtocol]
+
+    registry = svcs.Registry()
+    registry.register_value(ReaderProtocol, BrokenReader())
+    registry.register_factory(Service, auto(Service))
+
+    container = svcs.Container(registry)
+    service = container.get(Service)
+
+    # Service is created successfully (structural typing at runtime)
+    assert service is not None
+
+    # But calling the protocol method fails
+    with pytest.raises(AttributeError):
+        service.reader.read()  # type: ignore[attr-defined]
+
+
+def test_async_with_sync_get():
+    """Test error when using sync get() with async dependencies.
+
+    Critical error condition: Attempting to use container.get() when
+    a service has async factories should fail appropriately.
+    """
+    @dataclass
+    class Database:
+        host: str
+
+    async def async_db_factory() -> Database:
+        await asyncio.sleep(0.001)
+        return Database(host="async-host")
+
+    @dataclass
+    class Service:
+        db: Injectable[Database]
+
+    registry = svcs.Registry()
+    registry.register_factory(Database, async_db_factory)
+    registry.register_factory(Service, auto_async(Service))
+
+    container = svcs.Container(registry)
+
+    # Attempting to use sync get() with async factory should fail
+    with pytest.raises((RuntimeError, TypeError)):
+        container.get(Service)
+
+
+def test_async_with_mixed_dependencies():
+    """Test async service with both sync and async dependencies.
+
+    Critical workflow: Services can have a mix of sync and async
+    dependencies. auto_async() should handle both correctly.
+    """
+    @dataclass
+    class SyncConfig:
+        setting: str = "value"
+
+    @dataclass
+    class AsyncDatabase:
+        host: str
+
+    async def async_db_factory() -> AsyncDatabase:
+        await asyncio.sleep(0.001)
+        return AsyncDatabase(host="async-db")
+
+    @dataclass
+    class MixedService:
+        config: Injectable[SyncConfig]
+        db: Injectable[AsyncDatabase]
+
+    registry = svcs.Registry()
+    registry.register_factory(SyncConfig, auto(SyncConfig))
+    registry.register_factory(AsyncDatabase, async_db_factory)
+    registry.register_factory(MixedService, auto_async(MixedService))
+
+    # Use anyio to run async test
+    async def run_test():
+        async with svcs.Container(registry) as container:
+            service = await container.aget(MixedService)
+
+            assert service.config.setting == "value"  # type: ignore[attr-defined]
+            assert service.db.host == "async-db"  # type: ignore[attr-defined]
+
+    # Run with anyio backend (already installed in project)
+    import anyio
+    anyio.run(run_test)
+
+
+def test_custom_injector_exception_handling():
+    """Test custom injector that raises exceptions.
+
+    Edge case: Custom injectors may perform validation or other logic
+    that can raise exceptions. These should propagate correctly.
+    """
+    @dataclass
+    class StrictInjector:
+        container: svcs.Container
+
+        def __call__(self, target, **kwargs):
+            # Injector that rejects certain targets
+            if target.__name__ == "ForbiddenService":
+                raise ValueError(f"Service {target.__name__} is not allowed")
+
+            default = DefaultInjector(container=self.container)
+            return default(target, **kwargs)
+
+    @dataclass
+    class AllowedService:
+        value: int = 42
+
+    @dataclass
+    class ForbiddenService:
+        value: int = 99
+
+    registry = svcs.Registry()
+    # Factory parameter named svcs_container so svcs auto-detects it
+    def strict_injector_factory(svcs_container: svcs.Container) -> StrictInjector:
+        return StrictInjector(container=svcs_container)
+
+    registry.register_factory(DefaultInjector, strict_injector_factory)
+    registry.register_factory(AllowedService, auto(AllowedService))
+    registry.register_factory(ForbiddenService, auto(ForbiddenService))
+
+    container = svcs.Container(registry)
+
+    # Allowed service should work
+    allowed = container.get(AllowedService)
+    assert allowed.value == 42
+
+    # Forbidden service should raise exception
+    with pytest.raises(ValueError, match="not allowed"):
+        container.get(ForbiddenService)
+
+
+def test_nested_injectable_dependencies():
+    """Test deeply nested Injectable dependency chains.
+
+    Critical workflow: Service A depends on B, B depends on C, etc.
+    Verify the entire chain is resolved correctly.
+    """
+    @dataclass
+    class ConfigLevel3:
+        setting: str = "deep"
+
+    @dataclass
+    class ServiceLevel2:
+        config: Injectable[ConfigLevel3]
+
+    @dataclass
+    class ServiceLevel1:
+        service: Injectable[ServiceLevel2]
+
+    @dataclass
+    class TopService:
+        service: Injectable[ServiceLevel1]
+        name: str = "top"
+
+    registry = svcs.Registry()
+    registry.register_factory(ConfigLevel3, auto(ConfigLevel3))
+    registry.register_factory(ServiceLevel2, auto(ServiceLevel2))
+    registry.register_factory(ServiceLevel1, auto(ServiceLevel1))
+    registry.register_factory(TopService, auto(TopService))
+
+    container = svcs.Container(registry)
+    service = container.get(TopService)
+
+    # Navigate the entire chain
+    assert service.name == "top"
+    assert service.service.service.config.setting == "deep"  # type: ignore[attr-defined]
+
+
+def test_protocol_with_multiple_implementations():
+    """Test swapping between multiple protocol implementations.
+
+    Critical workflow: One of the key benefits of protocol-based injection
+    is the ability to swap implementations. Verify this works correctly
+    with multiple concrete implementations.
+    """
+    class StorageProtocol(Protocol):
+        def save(self, data: str) -> None:
+            ...
+
+        def load(self) -> str:
+            ...
+
+    @dataclass
+    class MemoryStorage:
+        def __init__(self):
+            self._data: str = ""
+
+        def save(self, data: str) -> None:
+            self._data = data
+
+        def load(self) -> str:
+            return self._data
+
+    @dataclass
+    class FileStorage:
+        def __init__(self):
+            self._file_data: str = "file_content"
+
+        def save(self, data: str) -> None:
+            self._file_data = data
+
+        def load(self) -> str:
+            return self._file_data
+
+    @dataclass
+    class Application:
+        storage: Injectable[StorageProtocol]
+
+    # Test with MemoryStorage
+    registry1 = svcs.Registry()
+    registry1.register_value(StorageProtocol, MemoryStorage())
+    registry1.register_factory(Application, auto(Application))
+
+    container1 = svcs.Container(registry1)
+    app1 = container1.get(Application)
+    app1.storage.save("memory_data")  # type: ignore[attr-defined]
+    assert app1.storage.load() == "memory_data"  # type: ignore[attr-defined]
+
+    # Test with FileStorage
+    registry2 = svcs.Registry()
+    registry2.register_value(StorageProtocol, FileStorage())
+    registry2.register_factory(Application, auto(Application))
+
+    container2 = svcs.Container(registry2)
+    app2 = container2.get(Application)
+    assert app2.storage.load() == "file_content"  # type: ignore[attr-defined]

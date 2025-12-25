@@ -4,13 +4,16 @@
    allowing function arguments and dataclass fields to be automatically resolved from a container using protocol-based
    type annotations. Includes Registry for configuration-time setup and Container for request-time resolution. `M`
 
-2. [x] Custom Construction with `__svcs__` — Implement support for classes/dataclasses to define a `__svcs__(container)`
-   method that controls how the instance is constructed, allowing custom initialization logic that can access other
-   services from the container. `S`
+2. [x] Protocol-Based Service Registration — Add support for registering concrete implementations against protocol
+   interfaces, enabling interface-based programming where services are requested by protocol type and the container
+   provides the registered implementation with full type safety. `S`
 
-4. [ ] Basic Examples and Documentation — Create foundational examples demonstrating core DI patterns (simple injection,
+3. [x] Basic Examples and Documentation — Create foundational examples demonstrating core DI patterns (simple injection,
    protocol usage, custom construction) with corresponding tests in `tests/` and documentation in `docs/examples/*.md`.
    Include examples from initial spec as starting point. `M`
+
+4. [] KeywordInjector — Move keyword injection out of the basic injector into `src/svcs_di/injectors/keyword.py`. Change
+   `examples` to have `examples/keyword/firste_example.py` etc. `S`
 
 5. [ ] Multiple Service Registrations — Add support for registering multiple implementations of the same protocol
    interface, storing them as a collection of registrations with metadata (factory, context, location) that will be

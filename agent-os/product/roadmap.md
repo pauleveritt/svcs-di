@@ -1,14 +1,10 @@
 # Product Roadmap
 
-1. [ ] Core Type-Safe Dependency Injection — Implement basic dependency injection using Python 3.12+ type hints,
+1. [x] Core Type-Safe Dependency Injection — Implement basic dependency injection using Python 3.12+ type hints,
    allowing function arguments and dataclass fields to be automatically resolved from a container using protocol-based
    type annotations. Includes Registry for configuration-time setup and Container for request-time resolution. `M`
 
-2. [ ] Protocol-Based Service Registration — Add support for registering concrete implementations against protocol
-   interfaces, enabling interface-based programming where services are requested by protocol type and the container
-   provides the registered implementation with full type safety. `S`
-
-3. [ ] Custom Construction with `__svcs__` — Implement support for classes/dataclasses to define a `__svcs__(container)`
+2. [x] Custom Construction with `__svcs__` — Implement support for classes/dataclasses to define a `__svcs__(container)`
    method that controls how the instance is constructed, allowing custom initialization logic that can access other
    services from the container. `S`
 

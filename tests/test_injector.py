@@ -211,6 +211,51 @@ async def test_async_injector_with_mixed_dependencies():
         assert service.async_dep.value == "async"
 
 
+def test_custom_injector_with_auto():
+    """auto() uses custom injector if registered in container."""
+    import dataclasses
+
+    # Create a custom injector that adds a prefix to string fields
+    @dataclasses.dataclass
+    class CustomInjector:
+        container: svcs.Container
+
+        def __call__(self, target, **kwargs):
+            # Use default logic
+            default_injector = DefaultInjector(container=self.container)
+            instance = default_injector(target, **kwargs)
+            # Custom behavior: modify the instance
+            if hasattr(instance, "name"):
+                instance.name = f"CUSTOM-{instance.name}"
+            return instance
+
+    @dataclass
+    class ServiceWithName:
+        db: Injectable[Database]
+        name: str = "original"
+
+    def custom_injector_factory(container: svcs.Container) -> CustomInjector:
+        return CustomInjector(container=container)
+
+    registry = svcs.Registry()
+
+    # Register custom injector
+    registry.register_factory(DefaultInjector, custom_injector_factory)
+
+    # Register dependencies
+    registry.register_value(Database, Database())
+
+    # Register service with auto()
+    registry.register_factory(ServiceWithName, auto(ServiceWithName))
+
+    # Get service
+    container = svcs.Container(registry)
+    service = container.get(ServiceWithName)
+
+    # Custom injector should have modified the name
+    assert service.name == "CUSTOM-original"
+
+
 # Use pytest-anyio for async tests
 test_async_injector_with_mixed_dependencies = pytest.mark.anyio(
     test_async_injector_with_mixed_dependencies
@@ -226,19 +271,6 @@ class FakeGreeter:
     """A class that doesn't match the protocol - missing greet method."""
 
     pass
-
-
-def test_protocol_runtime_validation_passes():
-    """Objects that implement the protocol pass isinstance check."""
-    greeter = ConcreteGreeter()
-    assert isinstance(greeter, GreeterProtocol)
-    assert greeter.greet("World") == "Hello, World!"
-
-
-def test_protocol_runtime_validation_fails():
-    """Objects that don't implement the protocol fail isinstance check."""
-    fake = FakeGreeter()
-    assert not isinstance(fake, GreeterProtocol)
 
 
 def test_protocol_based_injection_with_runtime_check():

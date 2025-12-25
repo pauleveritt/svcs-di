@@ -3,6 +3,11 @@ Minimal svcs.auto() helper for automatic dependency injection.
 
 This module provides a thin layer on top of svcs for automatic dependency resolution
 based on type hints, with explicit opt-in via the Injectable[T] marker.
+
+For complex initialization scenarios, classes can define a __svcs__ classmethod as
+an escape hatch to take full control of construction. This is useful when automatic
+field injection is insufficient for validation, conditional dependencies, or complex
+initialization logic.
 """
 
 import dataclasses
@@ -13,6 +18,7 @@ from typing import (
     Any,
     NamedTuple,
     Protocol,
+    Self,
     TypeGuard,
     cast,
     get_args,
@@ -330,6 +336,34 @@ async def _resolve_field_value_async(
     return (False, None)
 
 
+def _validate_svcs_method(target: type, svcs_method: Any) -> None:
+    """
+    Validate that __svcs__ is a classmethod with the correct signature.
+
+    Args:
+        target: The class being validated
+        svcs_method: The __svcs__ method to validate
+
+    Raises:
+        TypeError: If __svcs__ is not a classmethod
+    """
+    # Check if it's a classmethod by inspecting the descriptor
+    # When we getattr on a class, a classmethod returns a bound method
+    # An instance method would return a function object
+    # A staticmethod would return a function object
+
+    # Get the raw descriptor from the class dict to check its type
+    if hasattr(target, "__dict__") and "__svcs__" in target.__dict__:
+        raw_method = target.__dict__["__svcs__"]
+
+        # Check if it's a classmethod descriptor
+        if not isinstance(raw_method, classmethod):
+            raise TypeError(
+                f"__svcs__ must be a classmethod in {target.__name__}. "
+                f"Expected: @classmethod def __svcs__(cls, container: svcs.Container, **kwargs) -> Self"
+            )
+
+
 # ============================================================================
 # Public API
 # ============================================================================
@@ -342,12 +376,72 @@ def auto[T](target: type[T]) -> SvcsFactory[T]:
     Returns a factory function compatible with svcs.Registry.register_factory()
     that automatically resolves Injectable[T] dependencies from the container.
 
+    Custom Construction with __svcs__
+    ----------------------------------
+    For complex initialization logic that cannot be expressed through simple field
+    injection, classes can define a __svcs__ classmethod to take full control of
+    construction:
+
+        @dataclass
+        class MyService:
+            name: str
+            db: Database  # NOT Injectable - __svcs__ handles construction
+
+            @classmethod
+            def __svcs__(cls, container: svcs.Container, **kwargs) -> Self:
+                # Custom logic: validation, conditional deps, complex initialization
+                db = container.get(Database)
+                name = kwargs.get("name", "default")
+                if not name:
+                    raise ValueError("name cannot be empty")
+                return cls(name=name, db=db)
+
+    When __svcs__ is present:
+    - It COMPLETELY REPLACES automatic Injectable field injection
+    - Fields should NOT be annotated with Injectable[T]
+    - The method receives the container and any kwargs passed to the factory
+    - The method must return a fully constructed instance (Self type)
+    - Must be a @classmethod with signature: (cls, container, **kwargs) -> Self
+
+    When to use __svcs__ vs Injectable fields:
+    - Use Injectable fields for simple, straightforward dependency injection
+    - Use __svcs__ when you need:
+      * Custom validation or post-construction setup
+      * Conditional service resolution based on container contents
+      * Complex initialization requiring multiple container.get() calls
+      * Full control over the construction process
+
     To use a custom injector, register your own implementation:
         registry.register_factory(DefaultInjector, lambda c: MyCustomInjector(container=c))
     """
 
     def factory(svcs_container: svcs.Container, **kwargs: Any) -> T:
         """Factory function that resolves dependencies and constructs target."""
+        # Check if target has a __svcs__ method for custom construction
+        svcs_factory = getattr(target, "__svcs__", None)
+
+        if svcs_factory is not None:
+            # Validate that __svcs__ is a classmethod
+            _validate_svcs_method(target, svcs_factory)
+
+            # Validate that Injectable is not used with __svcs__
+            field_infos = get_field_infos(target)
+            injectable_fields = [fi.name for fi in field_infos if fi.is_injectable]
+            if injectable_fields:
+                msg = (
+                    f"Class {target.__name__} defines __svcs__() but also has "
+                    f"Injectable fields: {', '.join(injectable_fields)}. "
+                    f"When using __svcs__() for custom construction, fields should not be "
+                    f"annotated with Injectable[T]. The __svcs__() method is responsible "
+                    f"for all construction logic."
+                )
+                raise TypeError(msg)
+
+            # Invoke __svcs__ and return immediately, bypassing normal injection
+            result: T = svcs_factory(svcs_container, **kwargs)
+            return result
+
+        # Normal Injectable field injection path
         try:
             injector = svcs_container.get(DefaultInjector)
         except svcs.exceptions.ServiceNotFoundError:
@@ -363,10 +457,65 @@ def auto_async[T](target: type[T]) -> AsyncSvcsFactory[T]:
     Create an async factory function for automatic dependency injection.
 
     Like auto() but returns an async factory for use with async dependencies.
+
+    Custom Construction with __svcs__ in Async Context
+    ---------------------------------------------------
+    The __svcs__ protocol is supported in async factories, but only synchronous
+    __svcs__ methods are supported in v1. The __svcs__ method will be called
+    synchronously even in an async factory context:
+
+        @dataclass
+        class MyAsyncService:
+            name: str
+            db: Database
+
+            @classmethod
+            def __svcs__(cls, container: svcs.Container, **kwargs) -> Self:
+                # Synchronous container.get() works fine
+                db = container.get(Database)
+                name = kwargs.get("name", "default")
+                return cls(name=name, db=db)
+
+    Important notes for async context:
+    - Only SYNCHRONOUS __svcs__ methods are supported (not async def __svcs__)
+    - The __svcs__ method can use synchronous container.get() calls
+    - For async dependencies, use normal Injectable[T] fields instead
+    - Asynchronous __svcs__ (async def __svcs__) is planned for a future enhancement
+
+    For detailed documentation on the __svcs__ protocol, see the auto() function
+    docstring. All the same rules apply: __svcs__ completely replaces field
+    injection, fields should not be annotated with Injectable[T], and the method
+    must be a @classmethod.
     """
 
     async def async_factory(svcs_container: svcs.Container, **kwargs: Any) -> T:
         """Async factory function that resolves dependencies and constructs target."""
+        # Check if target has a __svcs__ method for custom construction
+        svcs_factory = getattr(target, "__svcs__", None)
+
+        if svcs_factory is not None:
+            # Validate that __svcs__ is a classmethod
+            _validate_svcs_method(target, svcs_factory)
+
+            # Validate that Injectable is not used with __svcs__
+            field_infos = get_field_infos(target)
+            injectable_fields = [fi.name for fi in field_infos if fi.is_injectable]
+            if injectable_fields:
+                msg = (
+                    f"Class {target.__name__} defines __svcs__() but also has "
+                    f"Injectable fields: {', '.join(injectable_fields)}. "
+                    f"When using __svcs__() for custom construction, fields should not be "
+                    f"annotated with Injectable[T]. The __svcs__() method is responsible "
+                    f"for all construction logic."
+                )
+                raise TypeError(msg)
+
+            # Invoke __svcs__ synchronously (v1 limitation: only sync __svcs__ supported)
+            # No await needed - __svcs__ is synchronous only
+            result: T = svcs_factory(svcs_container, **kwargs)
+            return result
+
+        # Normal async Injectable field injection path
         try:
             injector = await svcs_container.aget(DefaultAsyncInjector)
         except svcs.exceptions.ServiceNotFoundError:

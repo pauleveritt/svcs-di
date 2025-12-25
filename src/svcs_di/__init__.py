@@ -12,6 +12,8 @@ Key exports:
 - AsyncInjector: Protocol defining the async injector interface
 - DefaultInjector: Default synchronous injector implementation
 - DefaultAsyncInjector: Default asynchronous injector implementation
+- KeywordInjector: Injector with kwargs override support (three-tier precedence)
+- KeywordAsyncInjector: Async injector with kwargs override support
 """
 
 from svcs_di.auto import (
@@ -23,6 +25,7 @@ from svcs_di.auto import (
     auto,
     auto_async,
 )
+from svcs_di.injectors import KeywordAsyncInjector, KeywordInjector
 
 __all__ = [
     "auto",
@@ -32,4 +35,6 @@ __all__ = [
     "AsyncInjector",
     "DefaultInjector",
     "DefaultAsyncInjector",
+    "KeywordInjector",
+    "KeywordAsyncInjector",
 ]

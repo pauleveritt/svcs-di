@@ -201,7 +201,7 @@ def test_auto_factory_custom_injector():
 
 
 def test_get_injector_from_container():
-    """Can retrieve the injector directly from the container."""
+    """Can retrieve the injector directly from the container and use it."""
     from svcs_di import DefaultInjector
 
     @dataclass
@@ -220,9 +220,9 @@ def test_get_injector_from_container():
     container = svcs.Container(registry)
     injector = container.get(DefaultInjector)
 
-    # Use the injector directly
-    service = injector(SimpleService, name="custom")
-    assert service.name == "custom"
+    # Use the injector directly - kwargs are ignored in DefaultInjector
+    service = injector(SimpleService)
+    assert service.name == "test"  # Default value is used, kwargs ignored
 
 
 def test_complex_nested_dependencies():

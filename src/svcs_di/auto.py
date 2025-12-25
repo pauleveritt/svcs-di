@@ -58,36 +58,32 @@ class AsyncInjector(Protocol):
 
 
 @dataclasses.dataclass
-class _BaseInjector:
-    """Shared logic for sync and async injectors."""
+class DefaultInjector:
+    """
+    Default dependency injector. Resolves Injectable[T] fields from container.
+
+    Uses two-tier precedence for value resolution:
+    1. container.get(T) or container.get_abstract(T) for Injectable[T] fields
+    2. default values from parameter/field definition
+
+    Note: **kwargs is accepted for protocol compliance but is ignored.
+    For kwargs override support, use KeywordInjector from svcs_di.injectors.
+    """
 
     container: svcs.Container
 
-    def _validate_kwargs(
-        self, target: type, field_infos: list["FieldInfo"], kwargs: dict[str, Any]
-    ) -> None:
-        """Validate that all kwargs match actual field names."""
-        valid_field_names = {f.name for f in field_infos}
-        for kwarg_name in kwargs:
-            if kwarg_name not in valid_field_names:
-                raise ValueError(
-                    f"Unknown parameter '{kwarg_name}' for {target.__name__}. "
-                    f"Valid parameters: {', '.join(sorted(valid_field_names))}"
-                )
-
-
-@dataclasses.dataclass
-class DefaultInjector(_BaseInjector):
-    """Default dependency injector. Resolves Injectable[T] fields from container."""
-
     def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """Inject dependencies and construct target instance."""
+        """
+        Inject dependencies and construct target instance.
+
+        Note: kwargs are ignored in DefaultInjector. For kwargs override support,
+        use KeywordInjector from svcs_di.injectors.
+        """
         field_infos = get_field_infos(target)
-        self._validate_kwargs(target, field_infos, kwargs)
 
         resolved_kwargs: dict[str, Any] = {}
         for field_info in field_infos:
-            has_value, value = _resolve_field_value(field_info, self.container, kwargs)
+            has_value, value = _resolve_field_value(field_info, self.container)
             if has_value:
                 resolved_kwargs[field_info.name] = value
 
@@ -95,18 +91,33 @@ class DefaultInjector(_BaseInjector):
 
 
 @dataclasses.dataclass
-class DefaultAsyncInjector(_BaseInjector):
-    """Default async dependency injector. Like DefaultInjector but for async dependencies."""
+class DefaultAsyncInjector:
+    """
+    Default async dependency injector. Like DefaultInjector but for async dependencies.
+
+    Uses two-tier precedence for value resolution:
+    1. container.aget(T) or container.aget_abstract(T) for Injectable[T] fields
+    2. default values from parameter/field definition
+
+    Note: **kwargs is accepted for protocol compliance but is ignored.
+    For kwargs override support, use KeywordAsyncInjector from svcs_di.injectors.
+    """
+
+    container: svcs.Container
 
     async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """Inject async dependencies and construct target instance."""
+        """
+        Async inject dependencies and construct target instance.
+
+        Note: kwargs are ignored in DefaultAsyncInjector. For kwargs override support,
+        use KeywordAsyncInjector from svcs_di.injectors.
+        """
         field_infos = get_field_infos(target)
-        self._validate_kwargs(target, field_infos, kwargs)
 
         resolved_kwargs: dict[str, Any] = {}
         for field_info in field_infos:
             has_value, value = await _resolve_field_value_async(
-                field_info, self.container, kwargs
+                field_info, self.container
             )
             if has_value:
                 resolved_kwargs[field_info.name] = value
@@ -127,10 +138,14 @@ class Injectable[T]:
     resolved from the svcs container. Only parameters marked with Injectable
     will be injected.
 
-    Three-tier precedence for value resolution:
-    1. kwargs passed to factory (highest) - override everything
+    Two-tier precedence for value resolution (DefaultInjector):
+    1. container.get(T) or container.get_abstract(T) for protocols
+    2. default values from parameter/field definition
+
+    For kwargs override support (three-tier precedence), use KeywordInjector:
+    1. kwargs passed to injector (highest priority)
     2. container.get(T) or container.get_abstract(T) for protocols
-    3. default values from parameter/field definition
+    3. default values from parameter/field definition (lowest priority)
     """
 
     __slots__ = ()
@@ -194,11 +209,18 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
         inner = extract_inner_type(type_hint) if injectable else None
         protocol = is_protocol_type(inner) if inner else False
 
-        has_default = field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING  # type: ignore[misc]
+        has_default = (
+            field.default is not dataclasses.MISSING
+            or field.default_factory is not dataclasses.MISSING
+        )  # type: ignore[misc]
         default_value = (
             field.default
             if field.default is not dataclasses.MISSING
-            else (field.default_factory if field.default_factory is not dataclasses.MISSING else None)  # type: ignore[misc]
+            else (
+                field.default_factory
+                if field.default_factory is not dataclasses.MISSING
+                else None
+            )  # type: ignore[misc]
         )
 
         field_infos.append(
@@ -263,16 +285,18 @@ def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
 
 
 def _resolve_field_value(
-    field_info: FieldInfo, container: svcs.Container, kwargs: dict[str, Any]
+    field_info: FieldInfo, container: svcs.Container
 ) -> tuple[bool, Any]:
-    """Resolve a single field's value using three-tier precedence."""
+    """
+    Resolve a single field's value using two-tier precedence.
+
+    Two-tier precedence:
+    1. container.get(T) or container.get_abstract(T) for Injectable[T] fields
+    2. default values from field definition
+    """
     field_name = field_info.name
 
-    # Tier 1: kwargs
-    if field_name in kwargs:
-        return (True, kwargs[field_name])
-
-    # Tier 2: Injectable from container
+    # Tier 1: Injectable from container
     if field_info.is_injectable:
         inner_type = field_info.inner_type
         if inner_type is None:
@@ -285,7 +309,7 @@ def _resolve_field_value(
 
             return True, value
 
-    # Tier 3: default value
+    # Tier 2: default value
     if field_info.has_default:
         default_val = field_info.default_value
         if callable(default_val) and hasattr(default_val, "__self__"):
@@ -297,16 +321,18 @@ def _resolve_field_value(
 
 
 async def _resolve_field_value_async(
-    field_info: FieldInfo, container: svcs.Container, kwargs: dict[str, Any]
+    field_info: FieldInfo, container: svcs.Container
 ) -> tuple[bool, Any]:
-    """Async version of _resolve_field_value."""
+    """
+    Async version of _resolve_field_value using two-tier precedence.
+
+    Two-tier precedence:
+    1. container.aget(T) or container.aget_abstract(T) for Injectable[T] fields
+    2. default values from field definition
+    """
     field_name = field_info.name
 
-    # Tier 1: kwargs
-    if field_name in kwargs:
-        return (True, kwargs[field_name])
-
-    # Tier 2: Injectable from container (async)
+    # Tier 1: Injectable from container (async)
     if field_info.is_injectable:
         inner_type = field_info.inner_type
         if inner_type is None:
@@ -319,7 +345,7 @@ async def _resolve_field_value_async(
 
             return True, value
 
-    # Tier 3: default value
+    # Tier 2: default value
     if field_info.has_default:
         default_val = field_info.default_value
         if callable(default_val) and hasattr(default_val, "__self__"):
@@ -342,7 +368,12 @@ def auto[T](target: type[T]) -> SvcsFactory[T]:
     Returns a factory function compatible with svcs.Registry.register_factory()
     that automatically resolves Injectable[T] dependencies from the container.
 
-    To use a custom injector, register your own implementation:
+    DefaultInjector uses two-tier precedence (container.get, then defaults).
+    For kwargs override support, register KeywordInjector as a custom injector:
+        from svcs_di.injectors import KeywordInjector
+        registry.register_factory(DefaultInjector, lambda c: KeywordInjector(container=c))
+
+    To use a custom injector:
         registry.register_factory(DefaultInjector, lambda c: MyCustomInjector(container=c))
     """
 
@@ -363,6 +394,11 @@ def auto_async[T](target: type[T]) -> AsyncSvcsFactory[T]:
     Create an async factory function for automatic dependency injection.
 
     Like auto() but returns an async factory for use with async dependencies.
+
+    DefaultAsyncInjector uses two-tier precedence (container.aget, then defaults).
+    For kwargs override support, register KeywordAsyncInjector as a custom injector:
+        from svcs_di.injectors import KeywordAsyncInjector
+        registry.register_factory(DefaultAsyncInjector, lambda c: KeywordAsyncInjector(container=c))
     """
 
     async def async_factory(svcs_container: svcs.Container, **kwargs: Any) -> T:

@@ -17,8 +17,16 @@ EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 
 
 def get_example_files():
-    """Get all Python example files."""
+    """Get all Python example files (excluding subdirectories for now)."""
     return sorted(EXAMPLES_DIR.glob("*.py"))
+
+
+def get_keyword_example_files():
+    """Get all Python example files in keyword subdirectory."""
+    keyword_dir = EXAMPLES_DIR / "keyword"
+    if keyword_dir.exists():
+        return sorted(keyword_dir.glob("*.py"))
+    return []
 
 
 @pytest.mark.parametrize("example_file", get_example_files(), ids=lambda p: p.name)
@@ -41,6 +49,28 @@ def test_example_runs_without_error(example_file):
     assert result.stdout, f"Example {example_file.name} produced no output"
 
 
+@pytest.mark.parametrize(
+    "example_file", get_keyword_example_files(), ids=lambda p: p.name
+)
+def test_keyword_example_runs_without_error(example_file):
+    """Test that each keyword example runs without errors."""
+    result = subprocess.run(
+        [sys.executable, str(example_file)],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 0, (
+        f"Keyword example {example_file.name} failed with return code {result.returncode}\n"
+        f"stdout: {result.stdout}\n"
+        f"stderr: {result.stderr}"
+    )
+
+    # All examples should produce some output
+    assert result.stdout, f"Keyword example {example_file.name} produced no output"
+
+
 def test_basic_dataclass_example():
     """Test basic_dataclass.py produces expected output."""
     result = subprocess.run(
@@ -54,18 +84,20 @@ def test_basic_dataclass_example():
     assert "Database host=localhost, port=5432" in result.stdout
 
 
-def test_kwargs_override_example():
-    """Test kwargs_override.py produces expected output."""
+def test_keyword_first_example():
+    """Test keyword/first_example.py produces expected output."""
     result = subprocess.run(
-        [sys.executable, str(EXAMPLES_DIR / "kwargs_override.py")],
+        [sys.executable, str(EXAMPLES_DIR / "keyword" / "first_example.py")],
         capture_output=True,
         text=True,
     )
 
     assert result.returncode == 0
     assert "Case 1: Normal usage" in result.stdout
-    assert "Case 2: Override timeout via factory" in result.stdout
-    assert "Case 3: Override db for testing" in result.stdout
+    assert "Case 2: Override timeout via kwargs" in result.stdout
+    assert "Case 3: Override Injectable db for testing" in result.stdout
+    assert "Case 4: Register KeywordInjector as custom injector" in result.stdout
+    assert "Case 5: Kwargs validation" in result.stdout
     assert "Timeout: 30" in result.stdout
     assert "Timeout: 60" in result.stdout
 
@@ -125,6 +157,7 @@ def test_missing_dependency_raises_error():
     Critical workflow: Attempting to resolve a service when its Injectable
     dependency is not registered should fail with a clear error.
     """
+
     @dataclass
     class Database:
         host: str = "localhost"
@@ -150,6 +183,7 @@ def test_multiple_injectable_dependencies():
     Critical workflow: Services often depend on multiple other services.
     Verify all Injectable dependencies are resolved correctly.
     """
+
     @dataclass
     class Database:
         host: str = "db.example.com"
@@ -184,13 +218,14 @@ def test_multiple_injectable_dependencies():
     assert service.timeout == 30
 
 
-def test_kwargs_override_with_different_type():
-    """Test that kwargs override accepts different types (duck typing).
+def test_kwargs_override_with_keyword_injector():
+    """Test that KeywordInjector enables kwargs override for testing.
 
-    Edge case: When overriding an Injectable parameter via kwargs,
-    the override value should work regardless of exact type match,
-    as long as it's structurally compatible (duck typing).
+    This test demonstrates migrating from DefaultInjector to KeywordInjector
+    for kwargs override support.
     """
+    from svcs_di.injectors import KeywordInjector
+
     @dataclass
     class Database:
         host: str
@@ -203,28 +238,17 @@ def test_kwargs_override_with_different_type():
     class Service:
         db: Injectable[Database]
 
-    # Create a production Database factory
-    def prod_db_factory():
-        return Database(host="prod")
-
     registry = svcs.Registry()
-    registry.register_factory(Database, prod_db_factory)
-    registry.register_factory(Service, auto(Service))
+    registry.register_value(Database, Database(host="prod"))
 
     container = svcs.Container(registry)
+    injector = KeywordInjector(container=container)
 
-    # Override with different type - should work with duck typing
+    # Override with different type using KeywordInjector - duck typing works
     mock_db = MockDatabase(host="mock")
+    service = injector(Service, db=mock_db)
 
-    def custom_factory(svcs_container):
-        return auto(Service)(svcs_container, db=mock_db)
-
-    registry2 = svcs.Registry()
-    registry2.register_factory(Service, custom_factory)
-
-    container2 = svcs.Container(registry2)
-    service = container2.get(Service)
-
+    assert isinstance(service.db, (Database, MockDatabase))  # Type guard
     assert service.db.host == "mock"
 
 
@@ -235,9 +259,9 @@ def test_protocol_with_incompatible_implementation():
     at compile time. At runtime, if an implementation is missing methods,
     it will fail when those methods are called.
     """
+
     class ReaderProtocol(Protocol):
-        def read(self) -> str:
-            ...
+        def read(self) -> str: ...
 
     class BrokenReader:
         # Missing the read() method - not compatible
@@ -268,6 +292,7 @@ def test_async_with_sync_get():
     Critical error condition: Attempting to use container.get() when
     a service has async factories should fail appropriately.
     """
+
     @dataclass
     class Database:
         host: str
@@ -297,6 +322,7 @@ def test_async_with_mixed_dependencies():
     Critical workflow: Services can have a mix of sync and async
     dependencies. auto_async() should handle both correctly.
     """
+
     @dataclass
     class SyncConfig:
         setting: str = "value"
@@ -329,6 +355,7 @@ def test_async_with_mixed_dependencies():
 
     # Run with anyio backend (already installed in project)
     import anyio
+
     anyio.run(run_test)
 
 
@@ -338,6 +365,7 @@ def test_custom_injector_exception_handling():
     Edge case: Custom injectors may perform validation or other logic
     that can raise exceptions. These should propagate correctly.
     """
+
     @dataclass
     class StrictInjector:
         container: svcs.Container
@@ -359,6 +387,7 @@ def test_custom_injector_exception_handling():
         value: int = 99
 
     registry = svcs.Registry()
+
     # Factory parameter named svcs_container so svcs auto-detects it
     def strict_injector_factory(svcs_container: svcs.Container) -> StrictInjector:
         return StrictInjector(container=svcs_container)
@@ -384,6 +413,7 @@ def test_nested_injectable_dependencies():
     Critical workflow: Service A depends on B, B depends on C, etc.
     Verify the entire chain is resolved correctly.
     """
+
     @dataclass
     class ConfigLevel3:
         setting: str = "deep"
@@ -422,12 +452,11 @@ def test_protocol_with_multiple_implementations():
     is the ability to swap implementations. Verify this works correctly
     with multiple concrete implementations.
     """
-    class StorageProtocol(Protocol):
-        def save(self, data: str) -> None:
-            ...
 
-        def load(self) -> str:
-            ...
+    class StorageProtocol(Protocol):
+        def save(self, data: str) -> None: ...
+
+        def load(self) -> str: ...
 
     @dataclass
     class MemoryStorage:

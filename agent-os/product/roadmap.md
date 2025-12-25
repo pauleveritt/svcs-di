@@ -12,14 +12,17 @@
    protocol usage, custom construction) with corresponding tests in `tests/` and documentation in `docs/examples/*.md`.
    Include examples from initial spec as starting point. `M`
 
-4. [] KeywordInjector — Move keyword injection out of the basic injector into `src/svcs_di/injectors/keyword.py`. Change
-   `examples` to have `examples/keyword/firste_example.py` etc. `S`
+4. [x] KeywordInjector — Move keyword injection out of the basic injector into `src/svcs_di/injectors/keyword.py`. Change
+   `examples` to have `examples/keyword/firste_example.py` etc. Re-organize helpers to make it easy to write injectors
+   that match the protocol.
+   `S`
 
-5. [ ] Multiple Service Registrations — Add support for registering multiple implementations of the same protocol
-   interface, storing them as a collection of registrations with metadata (factory, context, location) that will be
+5. [ ] Multiple Service Registrations — Start a `HopscotchInjector` that is based on the `KeywordInjector`. Add support
+   for registering multiple implementations of the same protocol interface, storing them as a collection of
+   registrations with metadata (factory, context, location) that will be
    resolved based on request-time criteria. `L`
 
-6. [ ] Context-Specific Service Resolution — Implement context-aware service resolution where different implementations
+6. [ ] Context-Specific Service Resolution — In `HopscotchInjector` implement context-aware service resolution where different implementations
    are selected based on request context (e.g., CustomerContext vs EmployeeContext), allowing tenant-specific,
    role-based, or user-type-specific service behavior. `L`
 

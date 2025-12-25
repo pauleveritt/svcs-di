@@ -40,27 +40,6 @@ class DBService:
     timeout: int = 30
 
 
-def test_injector_kwarg_precedence():
-    """Kwargs override everything, including injectable parameters."""
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    # Register a database
-    registry.register_value(Database, Database(host="prod", port=5433))
-
-    # Get the injector from factory
-    injector = DefaultInjector(container=container)
-
-    # But override it with kwargs
-    custom_db = Database(host="test", port=1234)
-    instance = injector(DBService, db=custom_db)
-
-    # The kwarg should override the container value
-    assert isinstance(instance.db, Database)
-    assert instance.db.host == "test"
-    assert instance.db.port == 1234
-
-
 def test_injector_container_resolution():
     """Injectable parameters are resolved from container."""
     registry = svcs.Registry()
@@ -124,21 +103,6 @@ def test_injector_protocol_uses_get_abstract():
     assert instance.greeter.greet("World") == "Hello, World!"
 
 
-def test_injector_validates_kwargs():
-    """Unknown kwargs raise ValueError."""
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    registry.register_value(Database, Database())
-
-    # Get the injector from factory
-    injector = DefaultInjector(container=container)
-
-    # Try to pass an unknown kwarg
-    with pytest.raises(ValueError, match="unknown_param"):
-        injector(DBService, unknown_param="bad")
-
-
 def test_injector_propagates_service_not_found():
     """ServiceNotFoundError from container propagates as-is."""
     registry = svcs.Registry()
@@ -150,22 +114,6 @@ def test_injector_propagates_service_not_found():
     # Don't register Database - should raise ServiceNotFoundError
     with pytest.raises(svcs.exceptions.ServiceNotFoundError):
         injector(DBService)
-
-
-def test_injector_kwargs_override_defaults():
-    """Kwargs override default values for non-injectable parameters."""
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    registry.register_value(Database, Database())
-
-    # Get the injector from factory
-    injector = DefaultInjector(container=container)
-
-    # Override the default timeout
-    instance = injector(DBService, timeout=60)
-
-    assert instance.timeout == 60
 
 
 async def test_async_injector_with_mixed_dependencies():

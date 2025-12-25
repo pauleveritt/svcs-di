@@ -17,7 +17,7 @@
    that match the protocol.
    `S`
 
-5. [ ] Multiple Service Registrations — Start a `HopscotchInjector` that is based on the `KeywordInjector`. Add support
+5. [x] Multiple Service Registrations — Start a `HopscotchInjector` that is based on the `KeywordInjector`. Add support
    for registering multiple implementations of the same protocol interface, storing them as a collection of
    registrations with metadata (factory, context, location) that will be
    resolved based on request-time criteria. `L`

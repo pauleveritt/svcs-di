@@ -41,7 +41,7 @@ type AsyncSvcsFactory[T] = Callable[..., Awaitable[T]]
 class Injector(Protocol):
     """Protocol for dependency injector that constructs instances with resolved dependencies."""
 
-    def __call__[T](self, target: type[T], **kwargs: Any) -> T:
+    def __call__[T](self, target: type[T]) -> T:
         """Construct an instance of target with dependencies resolved."""
         ...
 
@@ -49,7 +49,7 @@ class Injector(Protocol):
 class AsyncInjector(Protocol):
     """Protocol for async dependency injector."""
 
-    async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
+    async def __call__[T](self, target: type[T]) -> T:
         """Construct an instance of target with async dependencies resolved."""
         ...
 
@@ -63,19 +63,13 @@ class DefaultInjector:
     1. container.get(T) or container.get_abstract(T) for Injectable[T] fields
     2. Default values from parameter/field definition
 
-    Note: **kwargs is accepted for protocol compliance but is ignored.
     For kwargs override support, use KeywordInjector from svcs_di.injectors.
     """
 
     container: svcs.Container
 
-    def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """
-        Inject dependencies and construct target instance.
-
-        Note: kwargs are ignored in DefaultInjector. For kwargs override support,
-        use KeywordInjector from svcs_di.injectors.
-        """
+    def __call__[T](self, target: type[T]) -> T:
+        """Inject dependencies and construct target instance."""
         field_infos = get_field_infos(target)
 
         resolved_kwargs: dict[str, Any] = {}
@@ -96,19 +90,13 @@ class DefaultAsyncInjector:
     1. container.aget(T) or container.aget_abstract(T) for Injectable[T] fields
     2. default values from parameter/field definition
 
-    Note: **kwargs is accepted for protocol compliance but is ignored.
     For kwargs override support, use KeywordAsyncInjector from svcs_di.injectors.
     """
 
     container: svcs.Container
 
-    async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """
-        Async inject dependencies and construct target instance.
-
-        Note: kwargs are ignored in DefaultAsyncInjector. For kwargs override support,
-        use KeywordAsyncInjector from svcs_di.injectors.
-        """
+    async def __call__[T](self, target: type[T]) -> T:
+        """Async inject dependencies and construct target instance."""
         field_infos = get_field_infos(target)
 
         resolved_kwargs: dict[str, Any] = {}
@@ -394,14 +382,14 @@ def auto[T](target: type[T]) -> SvcsFactory[T]:
         registry.register_factory(DefaultInjector, lambda c: MyCustomInjector(container=c))
     """
 
-    def factory(svcs_container: svcs.Container, **kwargs: Any) -> T:
+    def factory(svcs_container: svcs.Container, **kwargs: object) -> T:
         """Factory function that resolves dependencies and constructs target."""
         try:
             injector = svcs_container.get(DefaultInjector)
         except svcs.exceptions.ServiceNotFoundError:
             injector = DefaultInjector(container=svcs_container)
 
-        return injector(target, **kwargs)
+        return injector(target)
 
     return factory
 
@@ -418,13 +406,13 @@ def auto_async[T](target: type[T]) -> AsyncSvcsFactory[T]:
         registry.register_factory(DefaultAsyncInjector, lambda c: KeywordAsyncInjector(container=c))
     """
 
-    async def async_factory(svcs_container: svcs.Container, **kwargs: Any) -> T:
+    async def async_factory(svcs_container: svcs.Container, **kwargs: object) -> T:
         """Async factory function that resolves dependencies and constructs target."""
         try:
             injector = await svcs_container.aget(DefaultAsyncInjector)
         except svcs.exceptions.ServiceNotFoundError:
             injector = DefaultAsyncInjector(container=svcs_container)
 
-        return await injector(target, **kwargs)
+        return await injector(target)
 
     return async_factory

@@ -36,14 +36,13 @@ class LoggingInjector:
 
     container: svcs.Container
 
-    def __call__(self, target, **kwargs):
+    def __call__(self, target):
         """Injector that logs before and after injection."""
         print(f"[INJECTOR] Creating instance of {target.__name__}")
-        print(f"[INJECTOR] Kwargs: {kwargs}")
 
         # Use default injector to do the actual work
         default_injector = DefaultInjector(container=self.container)
-        instance = default_injector(target, **kwargs)
+        instance = default_injector(target)
 
         print(f"[INJECTOR] Created {target.__name__} successfully")
         return instance
@@ -51,19 +50,15 @@ class LoggingInjector:
 
 @dataclasses.dataclass
 class ValidatingInjector:
-    """Custom injector that validates field values."""
+    """Custom injector that validates field values after construction."""
 
     container: svcs.Container
 
-    def __call__(self, target, **kwargs):
+    def __call__(self, target):
         """Injector that validates timeout is positive."""
-        # Check if timeout is being set and validate it
-        if "timeout" in kwargs and kwargs["timeout"] <= 0:
-            raise ValueError(f"timeout must be positive, got {kwargs['timeout']}")
-
         # Use default injector to do the actual work
         default_injector = DefaultInjector(container=self.container)
-        instance = default_injector(target, **kwargs)
+        instance = default_injector(target)
 
         # Post-construction validation
         if hasattr(instance, "timeout") and instance.timeout <= 0:
@@ -113,30 +108,30 @@ def main():
     # Register services
     registry2.register_value(Database, Database())
 
-    # This will work (valid timeout)
-    def valid_factory(svcs_container):
-        return auto(Service)(svcs_container, timeout=60)
-
-    registry2.register_factory(Service, valid_factory)
+    # This will work (valid timeout with default)
+    registry2.register_factory(Service, auto(Service))
 
     container2 = svcs.Container(registry2)
     service2 = container2.get(Service)
     print(f"Valid service created with timeout: {service2.timeout}")
 
-    # This will fail (invalid timeout)
+    # This will fail (invalid timeout set as default)
     print("\nTrying to create service with invalid timeout...")
+
+    @dataclass
+    class InvalidService:
+        """A service with an invalid default timeout."""
+        db: Injectable[Database]
+        timeout: int = -10  # Invalid!
+
     registry3 = svcs.Registry()
     registry3.register_factory(DefaultInjector, validating_injector_factory)
     registry3.register_value(Database, Database())
-
-    def invalid_factory(svcs_container):
-        return auto(Service)(svcs_container, timeout=-10)
-
-    registry3.register_factory(Service, invalid_factory)
+    registry3.register_factory(InvalidService, auto(InvalidService))
 
     container3 = svcs.Container(registry3)
     try:
-        service3 = container3.get(Service)
+        service3 = container3.get(InvalidService)
     except ValueError as e:
         print(f"Validation failed as expected: {e}")
 

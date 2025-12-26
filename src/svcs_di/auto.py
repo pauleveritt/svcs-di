@@ -16,7 +16,6 @@ from typing import (
     Any,
     NamedTuple,
     Protocol,
-    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -221,7 +220,8 @@ def _create_field_info(
 def get_field_infos(target: type | Callable) -> list[FieldInfo]:
     """Extract field information from a dataclass or callable."""
     if dataclasses.is_dataclass(target):
-        return _get_dataclass_field_infos(cast(type, target))
+        assert isinstance(target, type)
+        return _get_dataclass_field_infos(target)
     else:
         return _get_callable_field_infos(target)
 
@@ -232,7 +232,7 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
     with suppress(Exception):
         type_hints = get_type_hints(target)
 
-    fields = dataclasses.fields(cast(Any, target))
+    fields = dataclasses.fields(target)  # type: ignore[arg-type]
 
     field_infos = []
     for field in fields:

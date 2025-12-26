@@ -16,7 +16,7 @@ $ pip install svcs-di
 
 ## Requirements
 
-- Python 3.14+
+- **Python 3.14+** (uses PEP 695 generics and modern type parameter syntax)
 
 ## Quick Start
 

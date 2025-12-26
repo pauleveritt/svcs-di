@@ -50,7 +50,7 @@ class FactoryRegistration:
                 return 2  # Exact match
             case (None, _):
                 return 0  # Default fallback
-            case (r, req) if req and issubclass(req, r):
+            case (r, req) if req is not None and r is not None and issubclass(req, r):
                 return 1  # Subclass match
             case _:
                 return -1  # No match
@@ -87,11 +87,13 @@ class ServiceLocator:
     """
 
     registrations: tuple[FactoryRegistration, ...] = field(default_factory=tuple)
-    _cache: dict[tuple[type, Optional[type]], Optional[type]] = field(default_factory=dict)
+    _cache: dict[tuple[type, Optional[type]], Optional[type]] = field(
+        default_factory=dict
+    )
 
     @staticmethod
     def with_registrations(
-        *registrations: tuple[type, type, Optional[type]]
+        *registrations: tuple[type, type, Optional[type]],
     ) -> "ServiceLocator":
         """
         Create ServiceLocator with registrations.
@@ -115,10 +117,7 @@ class ServiceLocator:
         return ServiceLocator(registrations=factory_regs)
 
     def register(
-        self,
-        service_type: type,
-        implementation: type,
-        resource: Optional[type] = None
+        self, service_type: type, implementation: type, resource: Optional[type] = None
     ) -> "ServiceLocator":
         """
         Return new ServiceLocator with additional registration (immutable, thread-safe).
@@ -141,9 +140,7 @@ class ServiceLocator:
         return ServiceLocator(registrations=new_registrations)
 
     def get_implementation(
-        self,
-        service_type: type,
-        resource: Optional[type] = None
+        self, service_type: type, resource: Optional[type] = None
     ) -> Optional[type]:
         """
         Find best matching implementation class for a service type using three-tier precedence.
@@ -256,7 +253,9 @@ class HopscotchInjector:
     """
 
     container: svcs.Container
-    resource: Optional[type] = None  # Optional: type to get from container for resource (e.g., RequestContext)
+    resource: Optional[type] = (
+        None  # Optional: type to get from container for resource (e.g., RequestContext)
+    )
 
     def _validate_kwargs(
         self, target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any]
@@ -326,17 +325,16 @@ class HopscotchInjector:
                 pass
 
         # Tier 3: default value
-        match field_info.has_default:
-            case True:
-                default_val = field_info.default_value
-                # Handle default_factory (callable) or regular default
-                match callable(default_val):
-                    case True:
-                        return True, default_val()
-                    case False:
-                        return True, default_val
-            case False:
-                return (False, None)
+        if field_info.has_default:
+            default_val = field_info.default_value
+            # Handle default_factory (callable) or regular default
+            if callable(default_val):
+                return True, default_val()
+            else:
+                return True, default_val
+
+        # No value found at any tier
+        return (False, None)
 
     def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """
@@ -450,17 +448,16 @@ class HopscotchAsyncInjector:
                 pass
 
         # Tier 3: default value
-        match field_info.has_default:
-            case True:
-                default_val = field_info.default_value
-                # Handle default_factory (callable) or regular default
-                match callable(default_val):
-                    case True:
-                        return True, default_val()
-                    case False:
-                        return True, default_val
-            case False:
-                return (False, None)
+        if field_info.has_default:
+            default_val = field_info.default_value
+            # Handle default_factory (callable) or regular default
+            if callable(default_val):
+                return True, default_val()
+            else:
+                return True, default_val
+
+        # No value found at any tier
+        return (False, None)
 
     async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """

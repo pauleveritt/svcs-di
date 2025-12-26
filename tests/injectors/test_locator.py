@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 import pytest
 import svcs
-from svcs.exceptions import ServiceNotFoundError
 
 from svcs_di.auto import Injectable
 from svcs_di.injectors.locator import (
@@ -54,6 +53,7 @@ class EmployeeContext:
 
 class AdminContext(EmployeeContext):
     """Subclass of EmployeeContext for testing inheritance."""
+
     pass
 
 
@@ -74,9 +74,12 @@ class Database:
 # Task 1.1: New tests for resource terminology
 # ============================================================================
 
+
 def test_factory_registration_with_resource_parameter():
     """Test FactoryRegistration with resource parameter instead of context."""
-    reg = FactoryRegistration(service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext)
+    reg = FactoryRegistration(
+        service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext
+    )
     assert reg.resource == EmployeeContext
     assert reg.matches(EmployeeContext) == 2  # Exact match
 
@@ -118,34 +121,43 @@ def test_backwards_compatibility_not_required():
     locator = ServiceLocator()
 
     with pytest.raises(TypeError):
-        locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)
+        locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)  # type: ignore[call-arg]
 
 
 # ============================================================================
 # Original tests - updated for resource terminology
 # ============================================================================
 
+
 def test_factory_registration_matches_no_resource():
     """Test matching with no resource (default)."""
-    reg = FactoryRegistration(service_type=Greeting, implementation=DefaultGreeting, resource=None)
+    reg = FactoryRegistration(
+        service_type=Greeting, implementation=DefaultGreeting, resource=None
+    )
     assert reg.matches(None) == 0  # Default match
 
 
 def test_factory_registration_matches_exact():
     """Test exact resource match (highest priority)."""
-    reg = FactoryRegistration(service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext)
+    reg = FactoryRegistration(
+        service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext
+    )
     assert reg.matches(EmployeeContext) == 2  # Exact match
 
 
 def test_factory_registration_matches_subclass():
     """Test subclass resource match (medium priority)."""
-    reg = FactoryRegistration(service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext)
+    reg = FactoryRegistration(
+        service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext
+    )
     assert reg.matches(AdminContext) == 1  # Subclass match
 
 
 def test_factory_registration_no_match():
     """Test when resource doesn't match."""
-    reg = FactoryRegistration(service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext)
+    reg = FactoryRegistration(
+        service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext
+    )
     assert reg.matches(CustomerContext) == -1  # No match
 
 
@@ -293,16 +305,19 @@ def registry():
 
 class RequestContext:
     """Base context for request-scoped services."""
+
     pass
 
 
 class EmployeeRequestContext(RequestContext):
     """Context for employee requests."""
+
     pass
 
 
 class CustomerRequestContext(RequestContext):
     """Context for customer requests."""
+
     pass
 
 
@@ -353,8 +368,12 @@ def test_hopscotch_injector_with_locator_and_context(registry):
     # Setup locator with multiple implementations
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
-    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeRequestContext)
-    locator = locator.register(Greeting, CustomerGreeting, resource=CustomerRequestContext)
+    locator = locator.register(
+        Greeting, EmployeeGreeting, resource=EmployeeRequestContext
+    )
+    locator = locator.register(
+        Greeting, CustomerGreeting, resource=CustomerRequestContext
+    )
     registry.register_value(ServiceLocator, locator)
 
     # Register context in container
@@ -394,7 +413,7 @@ def test_hopscotch_injector_with_default_fallback(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting] = field(default_factory=DefaultGreeting)
+        greeting: Injectable[Greeting] = field(default_factory=DefaultGreeting)  # type: ignore[assignment]
         name: str = "World"
 
     container = svcs.Container(registry)
@@ -414,7 +433,9 @@ def test_hopscotch_injector_multiple_injectable_fields(registry):
         database: Injectable[Database]
 
     locator = ServiceLocator()
-    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeRequestContext)
+    locator = locator.register(
+        Greeting, EmployeeGreeting, resource=EmployeeRequestContext
+    )
     locator = locator.register(Database, PostgresDB)
     registry.register_value(ServiceLocator, locator)
     registry.register_value(RequestContext, EmployeeRequestContext())
@@ -464,7 +485,9 @@ def test_hopscotch_injector_no_resource_configured(registry):
 
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
-    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeRequestContext)
+    locator = locator.register(
+        Greeting, EmployeeGreeting, resource=EmployeeRequestContext
+    )
     registry.register_value(ServiceLocator, locator)
 
     container = svcs.Container(registry)
@@ -485,7 +508,9 @@ async def test_hopscotch_async_injector_with_locator_and_context(registry):
 
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
-    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeRequestContext)
+    locator = locator.register(
+        Greeting, EmployeeGreeting, resource=EmployeeRequestContext
+    )
     registry.register_value(ServiceLocator, locator)
     registry.register_value(RequestContext, EmployeeRequestContext())
 

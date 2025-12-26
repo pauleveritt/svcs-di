@@ -143,7 +143,7 @@ class WelcomeService:
 
     def welcome_user(self, username: str) -> str:
         """Welcome a user with resource-appropriate greeting."""
-        db_status = self.greeting.connect()
+        db_status = self.database.connect()
         greeting_msg = self.greeting.greet(username)
         return f"{db_status} | {greeting_msg}"
 

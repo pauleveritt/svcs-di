@@ -312,7 +312,7 @@ def test_async_with_sync_get():
     container = svcs.Container(registry)
 
     # Attempting to use sync get() with async factory should fail
-    with pytest.raises((RuntimeError, TypeError)):
+    with pytest.raises((RuntimeError, TypeError)):  # type: ignore[call-overload]
         container.get(Service)
 
 

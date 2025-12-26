@@ -3,6 +3,9 @@ Minimal svcs.auto() helper for automatic dependency injection.
 
 This module provides a thin layer on top of svcs for automatic dependency resolution
 based on type hints, with explicit opt-in via the Injectable[T] marker.
+
+Requires Python 3.14+ for PEP 695 generic syntax (class Generic[T]:) and modern
+type parameter features.
 """
 
 import dataclasses
@@ -140,6 +143,26 @@ class Injectable[T]:
     1. kwargs passed to injector (highest priority)
     2. container.get(T) or container.get_abstract(T) for protocols
     3. default values from parameter/field definition (lowest priority)
+
+    Type Checking:
+    --------------
+    At runtime, this is a marker class. At type-checking time, the accompanying
+    auto.pyi stub file provides `type Injectable[T] = T`, making type checkers
+    understand that Injectable[Greeting] has all attributes of Greeting.
+
+    This dual-representation approach (runtime marker + type stub) enables:
+    - Runtime detection via get_origin(Injectable[T])
+    - Type-safe attribute access without cast()
+
+    Example:
+        @dataclass
+        class WelcomeService:
+            greeting: Injectable[Greeting]  # Type checkers see: Greeting
+            database: Injectable[Database]  # Type checkers see: Database
+
+        service = injector(WelcomeService)
+        service.greeting.greet("World")  # ✓ Type checker knows about greet()
+        service.database.connect()       # ✓ Type checker knows about connect()
     """
 
     __slots__ = ()

@@ -14,7 +14,7 @@
 
 ## Requirements
 
-- Uses the most-modern type hinting features available in Python 3.12+
+- Uses the most-modern type hinting features available in Python 3.14+ (PEP 695 generics)
 - Support Python protocols
 - Works with free threaded Python
 - Target dataclasses can have a special method `__svcs__` that governs construction (similar to `__hopscotch_factory__`
@@ -38,7 +38,7 @@
     - Leave out a bunch of features
     - Hardwired to the registry, uses a container
     - Doesn't need to support categories or advanced features
-    - Uses modern Python 3.12+ features for package discovery, walking directory trees, etc.
+    - Uses modern Python 3.14+ features for package discovery, walking directory trees, etc.
 
 ## Initial svcs+di for multiple registrations
 

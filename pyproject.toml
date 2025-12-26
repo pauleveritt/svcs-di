@@ -6,6 +6,15 @@ requires-python = ">=3.14"
 dependencies = [
     "svcs"
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 
 [dependency-groups]
 dev = [
@@ -13,6 +22,8 @@ dev = [
     "furo>=2025.12.19",
     "linkify-it-py>=2.0.3",
     "myst-parser",
+    "pyrefly>=0.46.1",
+    "pyright>=1.1.407",
     "pytest>=8.4.2",
     "pytest-cov>=4.1.0",
     "pytest-run-parallel>=0.8.1",

@@ -22,6 +22,7 @@ from svcs_di.auto import (
     DefaultInjector,
     Injectable,
     Injector,
+    TypeHintResolutionError,
     auto,
     auto_async,
 )
@@ -37,4 +38,5 @@ __all__ = [
     "DefaultAsyncInjector",
     "KeywordInjector",
     "KeywordAsyncInjector",
+    "TypeHintResolutionError",
 ]

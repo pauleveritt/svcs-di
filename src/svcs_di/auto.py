@@ -10,8 +10,8 @@ type parameter features.
 
 import dataclasses
 import inspect
+import logging
 from collections.abc import Awaitable, Callable
-from contextlib import suppress
 from typing import (
     Any,
     NamedTuple,
@@ -22,6 +22,18 @@ from typing import (
 )
 
 import svcs
+
+log = logging.getLogger("svcs_di")
+
+
+# ============================================================================
+# Exceptions
+# ============================================================================
+
+
+class TypeHintResolutionError(Exception):
+    """Failed to resolve type hints for dependency injection target."""
+
 
 # ============================================================================
 # Type Aliases
@@ -229,9 +241,28 @@ def get_field_infos(target: type | Callable) -> list[FieldInfo]:
 def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
     """Extract field information from a dataclass."""
     type_hints: dict[str, Any] = {}
-    with suppress(Exception):
+    try:
         type_hints = get_type_hints(target)
+    except NameError as e:
+        raise TypeHintResolutionError(
+            f"Cannot resolve type hints for dataclass {target.__name__!r}: "
+            f"undefined name in annotation. This typically means a forward reference "
+            f"is not quoted or the imported type is missing. Original error: {e}"
+        ) from e
+    except AttributeError as e:
+        raise TypeHintResolutionError(
+            f"Cannot resolve type hints for dataclass {target.__name__!r}: "
+            f"missing attribute. This typically means an annotation references an "
+            f"attribute that doesn't exist. Original error: {e}"
+        ) from e
+    except TypeError as e:
+        raise TypeHintResolutionError(
+            f"Cannot resolve type hints for dataclass {target.__name__!r}: "
+            f"type error in annotation. Original error: {e}"
+        ) from e
 
+    # dataclasses.fields() expects DataclassInstance, but we've already validated
+    # target is a dataclass via is_dataclass() check. Type checkers can't infer this.
     fields = dataclasses.fields(target)  # type: ignore[arg-type]
 
     field_infos = []
@@ -241,7 +272,7 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
         has_default = (
             field.default is not dataclasses.MISSING
             or field.default_factory is not dataclasses.MISSING
-        )  # type: ignore[misc]
+        )
         default_value = (
             field.default
             if field.default is not dataclasses.MISSING
@@ -249,7 +280,7 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
                 field.default_factory
                 if field.default_factory is not dataclasses.MISSING
                 else None
-            )  # type: ignore[misc]
+            )
         )
 
         field_infos.append(
@@ -261,18 +292,50 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
 
 def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
     """Extract parameter information from a callable."""
+    callable_name = getattr(target, '__name__', repr(target))
     sig = None
-    with suppress(Exception):
+    try:
         sig = inspect.signature(target, eval_str=True)
-    if sig is None:
-        with suppress(Exception):
+    except NameError as e:
+        # Try without eval_str as forward references might not resolve
+        try:
             sig = inspect.signature(target)
+        except (ValueError, TypeError) as e2:
+            raise TypeHintResolutionError(
+                f"Cannot get signature for callable {callable_name!r}: {e2}. "
+                f"This typically means the callable is a built-in or C extension "
+                f"without proper introspection support."
+            ) from e2
+    except (ValueError, TypeError) as e:
+        raise TypeHintResolutionError(
+            f"Cannot get signature for callable {callable_name!r}: {e}. "
+            f"This typically means the callable is a built-in or C extension "
+            f"without proper introspection support."
+        ) from e
+
     if sig is None:
         return []
 
     type_hints: dict[str, Any] = {}
-    with suppress(Exception):
+    try:
         type_hints = get_type_hints(target)
+    except NameError as e:
+        raise TypeHintResolutionError(
+            f"Cannot resolve type hints for callable {callable_name!r}: "
+            f"undefined name in annotation. This typically means a forward reference "
+            f"is not quoted or the imported type is missing. Original error: {e}"
+        ) from e
+    except AttributeError as e:
+        raise TypeHintResolutionError(
+            f"Cannot resolve type hints for callable {callable_name!r}: "
+            f"missing attribute. This typically means an annotation references an "
+            f"attribute that doesn't exist. Original error: {e}"
+        ) from e
+    except TypeError as e:
+        raise TypeHintResolutionError(
+            f"Cannot resolve type hints for callable {callable_name!r}: "
+            f"type error in annotation. Original error: {e}"
+        ) from e
 
     field_infos = []
     for param_name, param in sig.parameters.items():

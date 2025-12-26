@@ -234,6 +234,8 @@ def get_from_locator[T](
         )
 
     # Construct the instance from the implementation class
+    # Type ignore needed: implementation is type[T], calling it returns T,
+    # but type checkers can't infer constructor signatures generically
     return implementation()  # type: ignore[return-value]
 
 

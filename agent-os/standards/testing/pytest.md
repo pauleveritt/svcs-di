@@ -1,5 +1,7 @@
 # Testing Standards
 
+*ALWAYS* run pytest via `just test` (or `uv run pytest`). Don't run `python` or `pytest` directly.
+
 ## Test Structure
 
 - Place tests in `tests/` directory

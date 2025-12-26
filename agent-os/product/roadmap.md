@@ -28,26 +28,26 @@
    are selected based on request context (e.g., CustomerContext vs EmployeeContext), allowing tenant-specific,
    role-based, or user-type-specific service behavior. Enhanced with "resource" terminology refactoring and caching. `L`
 
-7. [ ] Location-Based Service Resolution — Add location/path-based service resolution where services registered with a
+7. [x] Optional Scanning Module — Create a minimal venusian-inspired scanning system for auto-discovery of services
+   using modern Python 3.12+ package discovery, simplified to work only with svcs-di registry without categories or
+   complex features. Keep this as an optional module separate from core. We have a local venusian checkout in
+   `/Users/pauleveritt/PycharmProjects/venusian`. `L`
+
+8. [ ] Location-Based Service Resolution — Add location/path-based service resolution where services registered with a
    location (PurePath) are selected when the request location is relative to the registered location, enabling URL-based
-   or hierarchical service selection. `M`
+   or hierarchical service selection. Allow this to be combined with `request` selection but at a lower precedence.  `M`
 
-8. [ ] Precedence and Scoring System — Implement intelligent precedence rules for selecting the best matching service
+9. [ ] Precedence and Scoring System — Implement intelligent precedence rules for selecting the best matching service
    when multiple registrations could satisfy a request, with scoring that considers both context and location matches,
-   and system vs site registration priority. Hopscatch has other "predicates" for matching and scoring, with a system
-   for plugging in custom predicates. `L`
+   and system vs site registration priority.`L`
+ 
+10. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
+    for plugging in custom predicates. `M`
 
-9. [ ] Container Setup and Registration Processing — Create the setup logic that processes Registry registrations at
-   container creation time, determining which registrations go into the registry (non-context, non-location) vs
-   container-local (context/location-specific), and registering the request itself as a service. `M`
-
-10. [ ] Advanced Examples for Context Resolution — Build comprehensive examples demonstrating context-aware patterns (
+11. [ ] Advanced Examples for Context Resolution — Build comprehensive examples demonstrating context-aware patterns (
     multi-tenant, customer vs employee, location-based routing) with full test coverage and documentation explaining the
     resolution strategy and precedence rules. `M`
 
-11. [ ] Optional Scanning Module — Create a minimal venusian-inspired scanning system for auto-discovery of services
-    using modern Python 3.12+ package discovery, simplified to work only with svcs-di registry without categories or
-    complex features. Keep this as an optional module separate from core. `L`
 
 12. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
     features like operators, configuration injection, and enhanced metadata, re-imagined to avoid import-time instance

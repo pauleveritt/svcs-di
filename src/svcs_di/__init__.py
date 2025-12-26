@@ -22,7 +22,7 @@ from svcs_di.auto import (
     DefaultInjector,
     Injectable,
     Injector,
-    TypeHintResolutionError,
+    TypeHintResolutionError,  # type: ignore[attr-defined]
     auto,
     auto_async,
 )

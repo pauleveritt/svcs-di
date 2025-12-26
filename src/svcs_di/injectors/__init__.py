@@ -9,10 +9,14 @@ KeywordInjector provides three-tier precedence:
 2. container.get(T) for Injectable[T] fields
 3. default values from field definitions (lowest priority)
 
+This module also exports the @injectable decorator for marking classes and
+classmethods for auto-discovery during package scanning.
+
 Note: Helper functions remain in svcs_di.auto to keep DefaultInjector standalone.
 KeywordInjector imports helpers from auto.py.
 """
 
+from .decorators import injectable
 from .keyword import KeywordAsyncInjector, KeywordInjector
 
-__all__ = ["KeywordInjector", "KeywordAsyncInjector"]
+__all__ = ["KeywordInjector", "KeywordAsyncInjector", "injectable"]

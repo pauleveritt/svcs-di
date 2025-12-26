@@ -292,11 +292,11 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
 
 def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
     """Extract parameter information from a callable."""
-    callable_name = getattr(target, '__name__', repr(target))
+    callable_name = getattr(target, "__name__", repr(target))
     sig = None
     try:
         sig = inspect.signature(target, eval_str=True)
-    except NameError as e:
+    except NameError:
         # Try without eval_str as forward references might not resolve
         try:
             sig = inspect.signature(target)
@@ -479,3 +479,17 @@ def auto_async[T](target: type[T]) -> AsyncSvcsFactory[T]:
         return await injector(target)
 
     return async_factory
+
+
+__all__ = [
+    "TypeHintResolutionError",
+    "Injectable",
+    "Injector",
+    "AsyncInjector",
+    "DefaultInjector",
+    "DefaultAsyncInjector",
+    "auto",
+    "auto_async",
+    "FieldInfo",
+    "get_field_infos",
+]

@@ -19,7 +19,7 @@ from svcs_di.auto import (
 )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class KeywordInjector:
     """
     Dependency injector with kwargs override support.
@@ -112,7 +112,7 @@ class KeywordInjector:
         return target(**resolved_kwargs)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class KeywordAsyncInjector:
     """
     Async dependency injector with kwargs override support.

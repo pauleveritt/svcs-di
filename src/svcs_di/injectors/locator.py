@@ -1,5 +1,5 @@
 """
-Service Locator - Multiple implementation registrations with context-based selection.
+Service Locator - Multiple implementation registrations with resource-based selection.
 
 This is a radical simplification that uses svcs.Registry as the underlying storage
 and provides a locator service that tracks multiple implementations.
@@ -18,65 +18,157 @@ import svcs
 from svcs_di.auto import FieldInfo, get_field_infos
 
 
-@dataclass
+@dataclass(frozen=True)
 class FactoryRegistration:
-    """A single implementation registration with service type and optional context."""
+    """A single implementation registration with service type and optional resource.
+
+    The resource represents a business entity type (e.g., Customer, Employee, Product)
+    that determines which implementation to use.
+    """
 
     service_type: type
     implementation: type
-    context: Optional[type] = None
+    resource: Optional[type] = None
 
-    def matches(self, request_context: Optional[type]) -> int:
+    def matches(self, resource: Optional[type]) -> int:
         """
-        Calculate match score for this registration.
+        Calculate match score for this registration against a resource type.
+
+        Args:
+            resource: The resource type to match against (e.g., Customer, Employee)
 
         Returns:
-            2 = exact context match (highest)
-            1 = subclass context match (medium)
-            0 = no context match (lowest/default)
+            2 = exact resource match (highest)
+            1 = subclass resource match (medium)
+            0 = no resource match (lowest/default)
             -1 = no match
         """
-        if self.context is None and request_context is None:
-            return 0  # Default match
-        elif self.context is request_context:
-            return 2  # Exact match
-        elif self.context is None:
-            return 0  # Default fallback
-        elif request_context and issubclass(request_context, self.context):
-            return 1  # Subclass match
-        return -1  # No match
+        match (self.resource, resource):
+            case (None, None):
+                return 0  # Default match
+            case (r, req) if r is req:
+                return 2  # Exact match
+            case (None, _):
+                return 0  # Default fallback
+            case (r, req) if req and issubclass(req, r):
+                return 1  # Subclass match
+            case _:
+                return -1  # No match
 
 
-@dataclass
+@dataclass(frozen=True)
 class ServiceLocator:
     """
-    Single locator that tracks multiple implementations across all service types.
+    Thread-safe, immutable locator for multiple service implementations with resource-based selection.
 
     This is the ONE locator for the entire application. Implementations are stored in LIFO
     order (most recent first). Selection uses three-tier precedence: exact > subclass > default.
+
+    Resource-based matching allows different implementations to be selected based on business
+    entity types like Customer, Employee, or Product.
+
+    Thread-safe: All data is immutable (frozen dataclass with tuple).
+
+    Caching: Results are cached for performance. Cache is keyed by (service_type, resource_type)
+    tuple and stores the resolved implementation class or None.
+
+    Example:
+        # Create with registrations
+        locator = ServiceLocator.with_registrations(
+            (Greeting, DefaultGreeting, None),
+            (Greeting, EmployeeGreeting, EmployeeContext),
+            (Database, PostgresDB, None),
+        )
+
+        # Or build up immutably
+        locator = ServiceLocator()
+        locator = locator.register(Greeting, DefaultGreeting)
+        locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
     """
 
-    registrations: list[FactoryRegistration] = field(default_factory=list)
+    registrations: tuple[FactoryRegistration, ...] = field(default_factory=tuple)
+    _cache: dict[tuple[type, Optional[type]], Optional[type]] = field(default_factory=dict)
+
+    @staticmethod
+    def with_registrations(
+        *registrations: tuple[type, type, Optional[type]]
+    ) -> "ServiceLocator":
+        """
+        Create ServiceLocator with registrations.
+
+        Args:
+            registrations: Variable number of (service_type, implementation, resource) tuples
+
+        Returns:
+            New ServiceLocator instance
+
+        Example:
+            locator = ServiceLocator.with_registrations(
+                (Greeting, DefaultGreeting, None),
+                (Greeting, EmployeeGreeting, EmployeeContext),
+            )
+        """
+        factory_regs = tuple(
+            FactoryRegistration(service_type, impl, ctx)
+            for service_type, impl, ctx in registrations
+        )
+        return ServiceLocator(registrations=factory_regs)
 
     def register(
         self,
         service_type: type,
         implementation: type,
-        context: Optional[type] = None
-    ) -> None:
-        """Register an implementation class for a service type with optional context. LIFO ordering (insert at front)."""
-        self.registrations.insert(0, FactoryRegistration(service_type, implementation, context))
+        resource: Optional[type] = None
+    ) -> "ServiceLocator":
+        """
+        Return new ServiceLocator with additional registration (immutable, thread-safe).
+
+        LIFO ordering: new registrations are inserted at the front.
+        Cache invalidation: new instance has empty cache since registrations changed.
+
+        Args:
+            service_type: The service type to register for
+            implementation: The implementation class
+            resource: Optional resource type for resource-specific resolution
+
+        Returns:
+            New ServiceLocator with the registration prepended and cleared cache
+        """
+        new_reg = FactoryRegistration(service_type, implementation, resource)
+        # Prepend for LIFO (most recent first)
+        new_registrations = (new_reg,) + self.registrations
+        # Return new instance with empty cache (cache invalidation)
+        return ServiceLocator(registrations=new_registrations)
 
     def get_implementation(
         self,
         service_type: type,
-        request_context: Optional[type] = None
+        resource: Optional[type] = None
     ) -> Optional[type]:
         """
         Find best matching implementation class for a service type using three-tier precedence.
 
-        Returns the implementation class from the first registration with highest score.
+        The resource parameter specifies a business entity type (like Customer or Employee)
+        to select the appropriate implementation.
+
+        Results are cached for performance. The cache key is (service_type, resource_type).
+
+        Args:
+            service_type: The service type to find an implementation for
+            resource: Optional resource type for resource-based matching
+
+        Returns:
+            The implementation class from the first registration with highest score.
+
+        Thread-safe: Only reads immutable data (cache is mutated but that's thread-safe for dicts).
         """
+        cache_key = (service_type, resource)
+
+        # Check cache first
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        # Cache miss - perform lookup
         best_score = -1
         best_impl = None
 
@@ -84,12 +176,19 @@ class ServiceLocator:
             if reg.service_type is not service_type:
                 continue  # Skip registrations for other service types
 
-            score = reg.matches(request_context)
+            score = reg.matches(resource)
             if score > best_score:
                 best_score = score
                 best_impl = reg.implementation
                 if score == 2:  # Exact match, can't do better
                     break
+
+        # Store in cache before returning
+        # Note: Mutating frozen dataclass's dict field is safe here because:
+        # 1. Dict operations are thread-safe for simple get/set
+        # 2. We never replace the dict object itself
+        # 3. Worst case: multiple threads compute same result (idempotent)
+        self._cache[cache_key] = best_impl
 
         return best_impl
 
@@ -97,7 +196,7 @@ class ServiceLocator:
 def get_from_locator[T](
     container: svcs.Container,
     service_type: type[T],
-    request_context: Optional[type] = None,
+    resource: Optional[type] = None,
 ) -> T:
     """
     Get a service from the locator with automatic construction.
@@ -108,31 +207,40 @@ def get_from_locator[T](
         # Setup (once per application)
         registry = svcs.Registry()
         locator = ServiceLocator()
-        locator.register(Greeting, DefaultGreeting)
-        locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)
-        locator.register(Database, PostgresDB)
-        locator.register(Database, TestDB, context=TestContext)
+        locator = locator.register(Greeting, DefaultGreeting)
+        locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
+        locator = locator.register(Database, PostgresDB)
+        locator = locator.register(Database, TestDB, resource=TestContext)
+        registry.register_value(ServiceLocator, locator)
+
+        # Or use the static constructor:
+        locator = ServiceLocator.with_registrations(
+            (Greeting, DefaultGreeting, None),
+            (Greeting, EmployeeGreeting, EmployeeContext),
+            (Database, PostgresDB, None),
+            (Database, TestDB, TestContext),
+        )
         registry.register_value(ServiceLocator, locator)
 
         # Get service (per request)
         container = svcs.Container(registry)
-        greeting = get_from_locator(container, Greeting, request_context=EmployeeContext)
-        db = get_from_locator(container, Database, request_context=TestContext)
+        greeting = get_from_locator(container, Greeting, resource=EmployeeContext)
+        db = get_from_locator(container, Database, resource=TestContext)
     """
     locator = container.get(ServiceLocator)
 
-    implementation = locator.get_implementation(service_type, request_context)
+    implementation = locator.get_implementation(service_type, resource)
 
     if implementation is None:
         raise LookupError(
-            f"No implementation found for {service_type.__name__} with context {request_context}"
+            f"No implementation found for {service_type.__name__} with resource {resource}"
         )
 
     # Construct the instance from the implementation class
     return implementation()  # type: ignore[return-value]
 
 
-@dataclass
+@dataclass(frozen=True)
 class HopscotchInjector:
     """
     Injector that extends KeywordInjector with locator-based multi-implementation resolution.
@@ -143,12 +251,12 @@ class HopscotchInjector:
     3. default values from field definitions (lowest priority)
 
     When resolving Injectable[T] fields, it first tries ServiceLocator.get_implementation()
-    with context obtained from container. If no locator or no matching implementation is found,
+    with resource obtained from container. If no locator or no matching implementation is found,
     falls back to standard container.get(T) or container.get_abstract(T) behavior.
     """
 
     container: svcs.Container
-    context_key: Optional[type] = None  # Optional: type to get from container for context (e.g., RequestContext)
+    resource: Optional[type] = None  # Optional: type to get from container for resource (e.g., RequestContext)
 
     def _validate_kwargs(
         self, target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any]
@@ -162,14 +270,14 @@ class HopscotchInjector:
                     f"Valid parameters: {', '.join(sorted(valid_field_names))}"
                 )
 
-    def _get_request_context(self) -> Optional[type]:
-        """Get the request context type from container if context_key is configured."""
-        if self.context_key is None:
+    def _get_resource(self) -> Optional[type]:
+        """Get the resource type from container if resource is configured."""
+        if self.resource is None:
             return None
 
         try:
-            context_instance = self.container.get(self.context_key)
-            return type(context_instance)
+            resource_instance = self.container.get(self.resource)
+            return type(resource_instance)
         except svcs.exceptions.ServiceNotFoundError:
             return None
 
@@ -197,9 +305,9 @@ class HopscotchInjector:
             # Try locator first for types with multiple implementations
             try:
                 locator = self.container.get(ServiceLocator)
-                request_context = self._get_request_context()
+                resource_type = self._get_resource()
 
-                implementation = locator.get_implementation(inner_type, request_context)
+                implementation = locator.get_implementation(inner_type, resource_type)
                 if implementation is not None:
                     # Construct instance using the injector recursively (for nested injection)
                     return (True, implementation())
@@ -218,15 +326,17 @@ class HopscotchInjector:
                 pass
 
         # Tier 3: default value
-        if field_info.has_default:
-            default_val = field_info.default_value
-            # Handle default_factory (callable) or regular default
-            if callable(default_val):
-                return True, default_val()
-            else:
-                return True, default_val
-
-        return (False, None)
+        match field_info.has_default:
+            case True:
+                default_val = field_info.default_value
+                # Handle default_factory (callable) or regular default
+                match callable(default_val):
+                    case True:
+                        return True, default_val()
+                    case False:
+                        return True, default_val
+            case False:
+                return (False, None)
 
     def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """
@@ -255,7 +365,7 @@ class HopscotchInjector:
         return target(**resolved_kwargs)
 
 
-@dataclass
+@dataclass(frozen=True)
 class HopscotchAsyncInjector:
     """
     Async version of HopscotchInjector.
@@ -270,7 +380,7 @@ class HopscotchAsyncInjector:
     """
 
     container: svcs.Container
-    context_key: Optional[type] = None
+    resource: Optional[type] = None
 
     def _validate_kwargs(
         self, target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any]
@@ -284,14 +394,14 @@ class HopscotchAsyncInjector:
                     f"Valid parameters: {', '.join(sorted(valid_field_names))}"
                 )
 
-    async def _get_request_context(self) -> Optional[type]:
-        """Get the request context type from container if context_key is configured."""
-        if self.context_key is None:
+    async def _get_resource(self) -> Optional[type]:
+        """Get the resource type from container if resource is configured."""
+        if self.resource is None:
             return None
 
         try:
-            context_instance = await self.container.aget(self.context_key)
-            return type(context_instance)
+            resource_instance = await self.container.aget(self.resource)
+            return type(resource_instance)
         except svcs.exceptions.ServiceNotFoundError:
             return None
 
@@ -319,9 +429,9 @@ class HopscotchAsyncInjector:
             # Try locator first for types with multiple implementations
             try:
                 locator = await self.container.aget(ServiceLocator)
-                request_context = await self._get_request_context()
+                resource_type = await self._get_resource()
 
-                implementation = locator.get_implementation(inner_type, request_context)
+                implementation = locator.get_implementation(inner_type, resource_type)
                 if implementation is not None:
                     # Construct instance using the injector recursively (for nested injection)
                     return (True, implementation())
@@ -340,15 +450,17 @@ class HopscotchAsyncInjector:
                 pass
 
         # Tier 3: default value
-        if field_info.has_default:
-            default_val = field_info.default_value
-            # Handle default_factory (callable) or regular default
-            if callable(default_val):
-                return True, default_val()
-            else:
-                return True, default_val
-
-        return (False, None)
+        match field_info.has_default:
+            case True:
+                default_val = field_info.default_value
+                # Handle default_factory (callable) or regular default
+                match callable(default_val):
+                    case True:
+                        return True, default_val()
+                    case False:
+                        return True, default_val
+            case False:
+                return (False, None)
 
     async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """

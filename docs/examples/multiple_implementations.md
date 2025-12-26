@@ -7,7 +7,7 @@ This guide demonstrates how to register and resolve multiple implementations for
 The multiple implementations feature enables:
 
 - **Multiple implementations per service type** - Register different implementations of the same protocol/interface
-- **Context-based resolution** - Select implementations based on request context
+- **Resource-based resolution** - Select implementations based on request context
 - **Three-tier precedence** - Exact context > Subclass context > Default
 - **LIFO ordering** - Later registrations override earlier ones
 - **Seamless integration** - Works with `Injectable[T]` pattern
@@ -84,9 +84,9 @@ registry = svcs.Registry()
 locator = ServiceLocator()
 
 # Register multiple implementations
-locator.register(Greeting, DefaultGreeting)  # Default (no context)
-locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)
-locator.register(Greeting, CustomerGreeting, context=CustomerContext)
+locator = locator.register(Greeting, DefaultGreeting)  # Default (no context)
+locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
+locator = locator.register(Greeting, CustomerGreeting, resource=CustomerContext)
 
 # Register locator as a service
 registry.register_value(ServiceLocator, locator)
@@ -111,7 +111,7 @@ registry.register_value(RequestContext, EmployeeContext())
 container = svcs.Container(registry)
 
 # Create injector and resolve
-injector = HopscotchInjector(container=container, context_key=RequestContext)
+injector = HopscotchInjector(container=container, resource=RequestContext)
 service = injector(WelcomeService)
 
 print(service.welcome("Alice"))  # "Hey, Alice!" (uses EmployeeGreeting)
@@ -157,10 +157,10 @@ Later registrations override earlier ones - the example below is conceptual (see
 locator = ServiceLocator()
 
 # System-level default
-locator.register(Greeting, DefaultGreeting)
+locator = locator.register(Greeting, DefaultGreeting)
 
 # Site-level override (inserted at position 0)
-locator.register(Greeting, SiteGreeting)
+locator = locator.register(Greeting, SiteGreeting)
 
 # Resolution: SiteGreeting wins (LIFO)
 ```
@@ -175,7 +175,7 @@ This allows:
 Kwargs have the highest precedence, overriding locator and container.  See `examples/multiple_implementations.py` for complete runnable example.
 
 ```text
-injector = HopscotchInjector(container=container, context_key=RequestContext)
+injector = HopscotchInjector(container=container, resource=RequestContext)
 
 # Normal resolution via locator
 service1 = injector(WelcomeService)
@@ -223,9 +223,9 @@ One ServiceLocator tracks all service types:
 locator = ServiceLocator()
 
 # Register multiple service types
-locator.register(Greeting, DefaultGreeting)
-locator.register(Database, ProductionDB)
-locator.register(Cache, RedisCache)
+locator = locator.register(Greeting, DefaultGreeting)
+locator = locator.register(Database, ProductionDB)
+locator = locator.register(Cache, RedisCache)
 
 # Each service type resolved independently
 ```
@@ -239,7 +239,7 @@ from svcs_di.injectors.locator import HopscotchAsyncInjector
 
 injector = HopscotchAsyncInjector(
     container=container,
-    context_key=RequestContext
+    resource=RequestContext
 )
 
 service = await injector(AsyncService)
@@ -274,7 +274,7 @@ Configure context_key explicitly:
 
 ```text
 # ✅ Good - explicit
-injector = HopscotchInjector(container=container, context_key=RequestContext)
+injector = HopscotchInjector(container=container, resource=RequestContext)
 
 # ⚠️ Works but less clear
 injector = HopscotchInjector(container=container)  # No context resolution
@@ -286,9 +286,9 @@ Use LIFO ordering strategically:
 
 ```text
 # ✅ Good - defaults first, overrides last
-locator.register(Greeting, SystemDefault)
-locator.register(Greeting, ApplicationOverride)
-locator.register(Greeting, SiteOverride)  # Wins due to LIFO
+locator = locator.register(Greeting, SystemDefault)
+locator = locator.register(Greeting, ApplicationOverride)
+locator = locator.register(Greeting, SiteOverride)  # Wins due to LIFO
 ```
 
 ### 3. Use Type-Only Registrations
@@ -297,7 +297,7 @@ Register type classes, not instances:
 
 ```text
 # ✅ Good - types
-locator.register(Greeting, DefaultGreeting)
+locator = locator.register(Greeting, DefaultGreeting)
 
 # ⚠️ Works but less flexible
 registry.register_value(Greeting, DefaultGreeting())
@@ -327,9 +327,9 @@ Different implementations per tenant:
 class TenantAContext: pass
 class TenantBContext: pass
 
-locator.register(Database, PostgresDB)  # Default
-locator.register(Database, TenantADB, context=TenantAContext)
-locator.register(Database, TenantBDB, context=TenantBContext)
+locator = locator.register(Database, PostgresDB)  # Default
+locator = locator.register(Database, TenantADB, resource=TenantAContext)
+locator = locator.register(Database, TenantBDB, resource=TenantBContext)
 ```
 
 ### Environment-Based
@@ -341,9 +341,9 @@ class ProductionContext: pass
 class StagingContext: pass
 class DevelopmentContext: pass
 
-locator.register(Cache, RedisCache, context=ProductionContext)
-locator.register(Cache, MemcachedCache, context=StagingContext)
-locator.register(Cache, InMemoryCache, context=DevelopmentContext)
+locator = locator.register(Cache, RedisCache, resource=ProductionContext)
+locator = locator.register(Cache, MemcachedCache, resource=StagingContext)
+locator = locator.register(Cache, InMemoryCache, resource=DevelopmentContext)
 ```
 
 ### Role-Based
@@ -355,9 +355,9 @@ class AnonymousContext: pass
 class UserContext: pass
 class AdminContext: pass
 
-locator.register(Dashboard, PublicDashboard, context=AnonymousContext)
-locator.register(Dashboard, UserDashboard, context=UserContext)
-locator.register(Dashboard, AdminDashboard, context=AdminContext)
+locator = locator.register(Dashboard, PublicDashboard, resource=AnonymousContext)
+locator = locator.register(Dashboard, UserDashboard, resource=UserContext)
+locator = locator.register(Dashboard, AdminDashboard, resource=AdminContext)
 ```
 
 ## Complete Example
@@ -365,7 +365,7 @@ locator.register(Dashboard, AdminDashboard, context=AdminContext)
 See [`examples/multiple_implementations.py`](../../examples/multiple_implementations.py) for a complete working example demonstrating:
 
 - Multiple implementations per service type
-- Context-based resolution
+- Resource-based resolution
 - Three-tier precedence
 - LIFO override behavior
 - Kwargs override
@@ -381,30 +381,30 @@ uv run python examples/multiple_implementations.py
 
 ### ServiceLocator
 
-**`register(service_type: type, implementation: type, context: Optional[type] = None)`**
+**`register(service_type: type, implementation: type, resource: Optional[type] = None)`**
 
 Register an implementation for a service type.
 
 - `service_type`: The protocol/interface type
 - `implementation`: The concrete implementation class
-- `context`: Optional context type for resolution
+- `resource`: Optional resource type for resolution
 
-**`get_implementation(service_type: type, request_context: Optional[type] = None) -> Optional[type]`**
+**`get_implementation(service_type: type, request_resource: Optional[type] = None) -> Optional[type]`**
 
 Get the best matching implementation using three-tier precedence.
 
 - `service_type`: The protocol/interface type to resolve
-- `request_context`: Optional context type for matching
+- `resource`: Optional resource type for matching
 - Returns: Implementation class or None
 
 ### HopscotchInjector
 
-**`__init__(container: svcs.Container, context_key: Optional[type] = None)`**
+**`__init__(container: svcs.Container, resource: Optional[type] = None)`**
 
 Create injector with optional context key.
 
 - `container`: The svcs Container instance
-- `context_key`: Optional type to get from container for context
+- `resource`: Optional type to get from container for resource
 
 **`__call__[T](target: type[T], **kwargs: Any) -> T`**
 
@@ -473,7 +473,7 @@ Async version using `aget()` and `aget_abstract()`.
 
 ```text
 # Ensure implementation is registered
-locator.register(Greeting, DefaultGreeting)
+locator = locator.register(Greeting, DefaultGreeting)
 
 # Ensure locator is registered as service
 registry.register_value(ServiceLocator, locator)
@@ -491,7 +491,7 @@ print(f"Request context: {type(context_instance)}")
 ```text
 # Debug: print all registrations
 for reg in locator.registrations:
-    print(f"{reg.service_type.__name__}: {reg.implementation.__name__} (context={reg.context})")
+    print(f"{reg.service_type.__name__}: {reg.implementation.__name__} (resource={reg.resource})")
 
 # Check context type
 context = container.get(RequestContext)
@@ -530,7 +530,7 @@ registry.register_value(Greeting, DefaultGreeting())
 
 ```text
 locator = ServiceLocator()
-locator.register(Greeting, DefaultGreeting)
+locator = locator.register(Greeting, DefaultGreeting)
 registry.register_value(ServiceLocator, locator)
 ```
 
@@ -551,8 +551,8 @@ registry.register_factory(Greeting, greeting_factory)
 
 ```text
 locator = ServiceLocator()
-locator.register(Greeting, DefaultGreeting)
-locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)
+locator = locator.register(Greeting, DefaultGreeting)
+locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
 registry.register_value(ServiceLocator, locator)
 ```
 

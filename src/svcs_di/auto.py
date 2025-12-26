@@ -13,7 +13,6 @@ from typing import (
     Any,
     NamedTuple,
     Protocol,
-    TypeGuard,
     cast,
     get_args,
     get_origin,
@@ -23,13 +22,8 @@ from typing import (
 import svcs
 
 # ============================================================================
-# Type Guards and Aliases
+# Type Aliases
 # ============================================================================
-
-
-def is_concrete_type(obj: type | None) -> TypeGuard[type]:
-    """Type guard to narrow type | None to type."""
-    return obj is not None
 
 
 type SvcsFactory[T] = Callable[..., T]
@@ -57,7 +51,7 @@ class AsyncInjector(Protocol):
         ...
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class DefaultInjector:
     """
     Default dependency injector. Resolves Injectable[T] fields from container.
@@ -90,7 +84,7 @@ class DefaultInjector:
         return target(**resolved_kwargs)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class DefaultAsyncInjector:
     """
     Default async dependency injector. Like DefaultInjector but for async dependencies.
@@ -186,6 +180,33 @@ def is_protocol_type(cls: type | Any) -> bool:
     return isinstance(cls, type) and getattr(cls, "_is_protocol", False)
 
 
+def _create_field_info(
+    name: str,
+    type_hint: Any,
+    has_default: bool,
+    default_value: Any,
+) -> FieldInfo:
+    """
+    Create a FieldInfo instance from field/parameter metadata.
+
+    This helper encapsulates the common logic for processing type hints
+    and determining Injectable, protocol, and default value information.
+    """
+    injectable = is_injectable(type_hint)
+    inner = extract_inner_type(type_hint) if injectable else None
+    protocol = is_protocol_type(inner) if inner else False
+
+    return FieldInfo(
+        name=name,
+        type_hint=type_hint,
+        is_injectable=injectable,
+        inner_type=inner,
+        is_protocol=protocol,
+        has_default=has_default,
+        default_value=default_value,
+    )
+
+
 def get_field_infos(target: type | Callable) -> list[FieldInfo]:
     """Extract field information from a dataclass or callable."""
     if dataclasses.is_dataclass(target):
@@ -205,9 +226,6 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
     field_infos = []
     for field in fields:
         type_hint = type_hints.get(field.name)
-        injectable = is_injectable(type_hint)
-        inner = extract_inner_type(type_hint) if injectable else None
-        protocol = is_protocol_type(inner) if inner else False
 
         has_default = (
             field.default is not dataclasses.MISSING
@@ -224,15 +242,7 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
         )
 
         field_infos.append(
-            FieldInfo(
-                name=field.name,
-                type_hint=type_hint,
-                is_injectable=injectable,
-                inner_type=inner,
-                is_protocol=protocol,
-                has_default=has_default,
-                default_value=default_value,
-            )
+            _create_field_info(field.name, type_hint, has_default, default_value)
         )
 
     return field_infos
@@ -262,23 +272,11 @@ def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
             continue
 
         type_hint = type_hints.get(param_name)
-        injectable = is_injectable(type_hint)
-        inner = extract_inner_type(type_hint) if injectable else None
-        protocol = is_protocol_type(inner) if inner else False
-
         has_default = param.default is not inspect.Parameter.empty
         default_value = param.default if has_default else None
 
         field_infos.append(
-            FieldInfo(
-                name=param_name,
-                type_hint=type_hint,
-                is_injectable=injectable,
-                inner_type=inner,
-                is_protocol=protocol,
-                has_default=has_default,
-                default_value=default_value,
-            )
+            _create_field_info(param_name, type_hint, has_default, default_value)
         )
 
     return field_infos
@@ -294,30 +292,28 @@ def _resolve_field_value(
     1. container.get(T) or container.get_abstract(T) for Injectable[T] fields
     2. default values from field definition
     """
-    field_name = field_info.name
-
     # Tier 1: Injectable from container
     if field_info.is_injectable:
         inner_type = field_info.inner_type
         if inner_type is None:
-            raise TypeError(f"Injectable field '{field_name}' has no inner type")
-        else:
-            if field_info.is_protocol:
-                value = container.get_abstract(inner_type)
-            else:
-                value = container.get(inner_type)
+            raise TypeError(f"Injectable field '{field_info.name}' has no inner type")
 
-            return True, value
+        if field_info.is_protocol:
+            value = container.get_abstract(inner_type)
+        else:
+            value = container.get(inner_type)
+
+        return True, value
 
     # Tier 2: default value
     if field_info.has_default:
         default_val = field_info.default_value
+        # Call default_factory if it's a callable (bound method from dataclass field)
         if callable(default_val) and hasattr(default_val, "__self__"):
             return True, default_val()
-        else:
-            return True, default_val
+        return True, default_val
 
-    return (False, None)
+    return False, None
 
 
 async def _resolve_field_value_async(
@@ -330,30 +326,28 @@ async def _resolve_field_value_async(
     1. container.aget(T) or container.aget_abstract(T) for Injectable[T] fields
     2. default values from field definition
     """
-    field_name = field_info.name
-
     # Tier 1: Injectable from container (async)
     if field_info.is_injectable:
         inner_type = field_info.inner_type
         if inner_type is None:
-            raise TypeError(f"Injectable field '{field_name}' has no inner type")
-        else:
-            if field_info.is_protocol:
-                value = await container.aget_abstract(inner_type)
-            else:
-                value = await container.aget(inner_type)
+            raise TypeError(f"Injectable field '{field_info.name}' has no inner type")
 
-            return True, value
+        if field_info.is_protocol:
+            value = await container.aget_abstract(inner_type)
+        else:
+            value = await container.aget(inner_type)
+
+        return True, value
 
     # Tier 2: default value
     if field_info.has_default:
         default_val = field_info.default_value
+        # Call default_factory if it's a callable (bound method from dataclass field)
         if callable(default_val) and hasattr(default_val, "__self__"):
             return True, default_val()
-        else:
-            return True, default_val
+        return True, default_val
 
-    return (False, None)
+    return False, None
 
 
 # ============================================================================

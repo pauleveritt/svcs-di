@@ -12,7 +12,8 @@
    protocol usage, custom construction) with corresponding tests in `tests/` and documentation in `docs/examples/*.md`.
    Include examples from initial spec as starting point. `M`
 
-4. [x] KeywordInjector — Move keyword injection out of the basic injector into `src/svcs_di/injectors/keyword.py`. Change
+4. [x] KeywordInjector — Move keyword injection out of the basic injector into `src/svcs_di/injectors/keyword.py`.
+   Change
    `examples` to have `examples/keyword/firste_example.py` etc. Re-organize helpers to make it easy to write injectors
    that match the protocol.
    `S`
@@ -22,9 +23,10 @@
    registrations with metadata (factory, context, location) that will be
    resolved based on request-time criteria. `L`
 
-6. [ ] Context-Specific Service Resolution — In `HopscotchInjector` implement context-aware service resolution where different implementations
+6. [x] Context-Specific Service Resolution — In `HopscotchInjector` implement context-aware service resolution where
+   different implementations
    are selected based on request context (e.g., CustomerContext vs EmployeeContext), allowing tenant-specific,
-   role-based, or user-type-specific service behavior. `L`
+   role-based, or user-type-specific service behavior. Enhanced with "resource" terminology refactoring and caching. `L`
 
 7. [ ] Location-Based Service Resolution — Add location/path-based service resolution where services registered with a
    location (PurePath) are selected when the request location is relative to the registered location, enabling URL-based
@@ -32,7 +34,8 @@
 
 8. [ ] Precedence and Scoring System — Implement intelligent precedence rules for selecting the best matching service
    when multiple registrations could satisfy a request, with scoring that considers both context and location matches,
-   and system vs site registration priority. `L`
+   and system vs site registration priority. Hopscatch has other "predicates" for matching and scoring, with a system
+   for plugging in custom predicates. `L`
 
 9. [ ] Container Setup and Registration Processing — Create the setup logic that processes Registry registrations at
    container creation time, determining which registrations go into the registry (non-context, non-location) vs

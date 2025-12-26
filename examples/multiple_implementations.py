@@ -2,14 +2,14 @@
 Multiple Implementations Example - ServiceLocator and HopscotchInjector
 
 This example demonstrates how to register multiple implementations for the same
-service type and use context-based resolution to select the appropriate one.
+service type and use resource-based resolution to select the appropriate one.
 
 Key Features Demonstrated:
 - Multiple implementations per service type
-- Context-based resolution with three-tier precedence
+- Resource-based resolution with three-tier precedence
 - LIFO ordering (later registrations override earlier ones)
 - HopscotchInjector integration with Injectable[T]
-- Dynamic context resolution from container
+- Dynamic resource resolution from container
 """
 
 from dataclasses import dataclass
@@ -49,30 +49,30 @@ class Database:
 
 
 # ============================================================================
-# Context Classes for Resolution
+# Resource Classes for Resolution
 # ============================================================================
 
 
 class RequestContext:
-    """Base context for all requests."""
+    """Base resource type for all requests."""
 
     pass
 
 
 class EmployeeContext(RequestContext):
-    """Context for employee requests."""
+    """Resource type for employee requests."""
 
     pass
 
 
 class CustomerContext(RequestContext):
-    """Context for customer requests."""
+    """Resource type for customer requests."""
 
     pass
 
 
 class AdminContext(EmployeeContext):
-    """Context for admin requests (subclass of EmployeeContext)."""
+    """Resource type for admin requests (subclass of EmployeeContext)."""
 
     pass
 
@@ -84,28 +84,28 @@ class AdminContext(EmployeeContext):
 
 @dataclass
 class DefaultGreeting(Greeting):
-    """Default greeting for all contexts (lowest precedence)."""
+    """Default greeting for all resources (lowest precedence)."""
 
     salutation: str = "Good Day"
 
 
 @dataclass
 class EmployeeGreeting(Greeting):
-    """Greeting for employee contexts."""
+    """Greeting for employee resources."""
 
     salutation: str = "Hey"
 
 
 @dataclass
 class CustomerGreeting(Greeting):
-    """Greeting for customer contexts."""
+    """Greeting for customer resources."""
 
     salutation: str = "Hello"
 
 
 @dataclass
 class AdminGreeting(Greeting):
-    """Special greeting for admin contexts (overrides EmployeeGreeting)."""
+    """Special greeting for admin resources (overrides EmployeeGreeting)."""
 
     salutation: str = "Welcome, Admin"
 
@@ -124,7 +124,7 @@ class ProductionDB(Database):
 
 @dataclass
 class TestDB(Database):
-    """Test database for testing contexts."""
+    """Test database for testing resources."""
 
     name: str = "test-db"
 
@@ -142,7 +142,7 @@ class WelcomeService:
     database: Injectable[Database]
 
     def welcome_user(self, username: str) -> str:
-        """Welcome a user with context-appropriate greeting."""
+        """Welcome a user with resource-appropriate greeting."""
         db_status = self.greeting.connect()
         greeting_msg = self.greeting.greet(username)
         return f"{db_status} | {greeting_msg}"
@@ -155,7 +155,7 @@ class WelcomeService:
 
 def example_basic_multiple_implementations():
     """
-    Demonstrates registering multiple implementations and basic resolution.
+    Demonstrates registering multiple implementations and basic resource-based resolution.
     """
     print("\n" + "=" * 70)
     print("Example 1: Basic Multiple Implementations")
@@ -166,19 +166,19 @@ def example_basic_multiple_implementations():
     locator = ServiceLocator()
 
     # Register multiple greeting implementations
-    locator.register(Greeting, DefaultGreeting)  # Default (no context)
-    locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)
-    locator.register(Greeting, CustomerGreeting, context=CustomerContext)
+    locator = locator.register(Greeting, DefaultGreeting)  # Default (no resource)
+    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
+    locator = locator.register(Greeting, CustomerGreeting, resource=CustomerContext)
 
     # Register multiple database implementations
-    locator.register(Database, ProductionDB)  # Default
-    locator.register(Database, TestDB, context=EmployeeContext)
+    locator = locator.register(Database, ProductionDB)  # Default
+    locator = locator.register(Database, TestDB, resource=EmployeeContext)
 
     # Register the locator as a service
     registry.register_value(ServiceLocator, locator)
 
-    # Test 1: No context (uses defaults)
-    print("\nTest 1: No context - uses default implementations")
+    # Test 1: No resource (uses defaults)
+    print("\nTest 1: No resource - uses default implementations")
     container = svcs.Container(registry)
     injector = HopscotchInjector(container=container)
 
@@ -187,22 +187,22 @@ def example_basic_multiple_implementations():
     print(f"  Database type: {type(service.database).__name__}")
     print(f"  Result: {service.greeting.greet('World')}")
 
-    # Test 2: Employee context
-    print("\nTest 2: Employee context - uses employee implementations")
+    # Test 2: Employee resource
+    print("\nTest 2: Employee resource - uses employee implementations")
     registry.register_value(RequestContext, EmployeeContext())
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container, context_key=RequestContext)
+    injector = HopscotchInjector(container=container, resource=RequestContext)
 
     service = injector(WelcomeService)
     print(f"  Greeting type: {type(service.greeting).__name__}")
     print(f"  Database type: {type(service.database).__name__}")
     print(f"  Result: {service.greeting.greet('Alice')}")
 
-    # Test 3: Customer context
-    print("\nTest 3: Customer context - uses customer greeting, default database")
+    # Test 3: Customer resource
+    print("\nTest 3: Customer resource - uses customer greeting, default database")
     registry.register_value(RequestContext, CustomerContext())
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container, context_key=RequestContext)
+    injector = HopscotchInjector(container=container, resource=RequestContext)
 
     service = injector(WelcomeService)
     print(f"  Greeting type: {type(service.greeting).__name__}")
@@ -229,11 +229,11 @@ def example_lifo_override():
 
     # System-level default
     print("\nStep 1: System registers default greeting")
-    locator.register(Greeting, DefaultGreeting)
+    locator = locator.register(Greeting, DefaultGreeting)
 
     # Site-level override (LIFO - inserted at position 0)
     print("Step 2: Site overrides with customer greeting (LIFO)")
-    locator.register(Greeting, CustomerGreeting)
+    locator = locator.register(Greeting, CustomerGreeting)
 
     registry.register_value(ServiceLocator, locator)
     container = svcs.Container(registry)
@@ -258,9 +258,9 @@ def example_lifo_override():
 def example_three_tier_precedence():
     """
     Demonstrates three-tier precedence:
-    - Exact context match (highest)
-    - Subclass context match (medium)
-    - No context/default (lowest)
+    - Exact resource match (highest)
+    - Subclass resource match (medium)
+    - No resource/default (lowest)
     """
     print("\n" + "=" * 70)
     print("Example 3: Three-Tier Precedence")
@@ -270,9 +270,9 @@ def example_three_tier_precedence():
     locator = ServiceLocator()
 
     # Register with different precedence levels
-    locator.register(Greeting, DefaultGreeting)  # Low: no context
-    locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)  # Medium/High
-    locator.register(Greeting, AdminGreeting, context=AdminContext)  # High for AdminContext
+    locator = locator.register(Greeting, DefaultGreeting)  # Low: no resource
+    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)  # Medium/High
+    locator = locator.register(Greeting, AdminGreeting, resource=AdminContext)  # High for AdminContext
 
     registry.register_value(ServiceLocator, locator)
 
@@ -280,7 +280,7 @@ def example_three_tier_precedence():
     print("\nTest 1: AdminContext - exact match (highest precedence)")
     registry.register_value(RequestContext, AdminContext())
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container, context_key=RequestContext)
+    injector = HopscotchInjector(container=container, resource=RequestContext)
 
     @dataclass
     class TestService:
@@ -293,25 +293,25 @@ def example_three_tier_precedence():
     # Test 2: Subclass match (AdminContext inherits from EmployeeContext)
     print("\nTest 2: AdminContext with no exact match - subclass match (medium precedence)")
     locator2 = ServiceLocator()
-    locator2.register(Greeting, DefaultGreeting)
-    locator2.register(Greeting, EmployeeGreeting, context=EmployeeContext)
+    locator2 = locator2.register(Greeting, DefaultGreeting)
+    locator2 = locator2.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
     # No AdminGreeting registered this time
 
     registry2 = svcs.Registry()
     registry2.register_value(ServiceLocator, locator2)
     registry2.register_value(RequestContext, AdminContext())
     container2 = svcs.Container(registry2)
-    injector2 = HopscotchInjector(container=container2, context_key=RequestContext)
+    injector2 = HopscotchInjector(container=container2, resource=RequestContext)
 
     service2 = injector2(TestService)
     print(f"  Got: {type(service2.greeting).__name__}")
     print(f"  Salutation: {service2.greeting.salutation}")
     print("  (Matched EmployeeContext via subclass relationship)")
 
-    # Test 3: Default match (no context)
-    print("\nTest 3: No context - default match (lowest precedence)")
+    # Test 3: Default match (no resource)
+    print("\nTest 3: No resource - default match (lowest precedence)")
     container3 = svcs.Container(registry2)
-    injector3 = HopscotchInjector(container=container3)  # No context_key
+    injector3 = HopscotchInjector(container=container3)  # No resource
 
     service3 = injector3(TestService)
     print(f"  Got: {type(service3.greeting).__name__}")
@@ -336,14 +336,14 @@ def example_kwargs_override():
     locator = ServiceLocator()
 
     # Register default implementations
-    locator.register(Greeting, EmployeeGreeting, context=EmployeeContext)
-    locator.register(Database, ProductionDB)
+    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
+    locator = locator.register(Database, ProductionDB)
 
     registry.register_value(ServiceLocator, locator)
     registry.register_value(RequestContext, EmployeeContext())
 
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container, context_key=RequestContext)
+    injector = HopscotchInjector(container=container, resource=RequestContext)
 
     # Without kwargs - uses locator/container
     print("\nWithout kwargs override:")

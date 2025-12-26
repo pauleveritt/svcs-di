@@ -8,7 +8,13 @@ from typing import Protocol, runtime_checkable
 import pytest
 import svcs
 
-from svcs_di.auto import Injectable, auto, auto_async
+from svcs_di.auto import (
+    Injectable,
+    auto,
+    auto_async,
+    _create_field_info,
+    FieldInfo,
+)
 
 
 @runtime_checkable
@@ -376,3 +382,128 @@ def test_missing_required_non_injectable_parameter():
 
 # Use pytest-anyio instead of pytest-asyncio
 test_auto_factory_async = pytest.mark.anyio(test_auto_factory_async)
+
+
+# ============================================================================
+# Tests for _create_field_info() helper
+# ============================================================================
+
+
+def test_create_field_info_non_injectable():
+    """_create_field_info() handles non-injectable fields."""
+    field_info = _create_field_info(
+        name="timeout",
+        type_hint=int,
+        has_default=True,
+        default_value=30,
+    )
+
+    assert field_info.name == "timeout"
+    assert field_info.type_hint is int
+    assert field_info.is_injectable is False
+    assert field_info.inner_type is None
+    assert field_info.is_protocol is False
+    assert field_info.has_default is True
+    assert field_info.default_value == 30
+
+
+def test_create_field_info_injectable_concrete():
+    """_create_field_info() handles Injectable[ConcreteType] fields."""
+    field_info = _create_field_info(
+        name="db",
+        type_hint=Injectable[Database],
+        has_default=False,
+        default_value=None,
+    )
+
+    assert field_info.name == "db"
+    assert field_info.type_hint == Injectable[Database]
+    assert field_info.is_injectable is True
+    assert field_info.inner_type is Database
+    assert field_info.is_protocol is False
+    assert field_info.has_default is False
+    assert field_info.default_value is None
+
+
+def test_create_field_info_injectable_protocol():
+    """_create_field_info() handles Injectable[Protocol] fields."""
+    field_info = _create_field_info(
+        name="greeter",
+        type_hint=Injectable[GreeterProtocol],
+        has_default=False,
+        default_value=None,
+    )
+
+    assert field_info.name == "greeter"
+    assert field_info.type_hint == Injectable[GreeterProtocol]
+    assert field_info.is_injectable is True
+    assert field_info.inner_type is GreeterProtocol
+    assert field_info.is_protocol is True
+    assert field_info.has_default is False
+    assert field_info.default_value is None
+
+
+def test_create_field_info_with_default_factory():
+    """_create_field_info() handles fields with default_factory."""
+
+    def make_list():
+        return []
+
+    field_info = _create_field_info(
+        name="items",
+        type_hint=list,
+        has_default=True,
+        default_value=make_list,
+    )
+
+    assert field_info.name == "items"
+    assert field_info.type_hint is list
+    assert field_info.is_injectable is False
+    assert field_info.has_default is True
+    assert field_info.default_value is make_list
+
+
+def test_create_field_info_none_type_hint():
+    """_create_field_info() handles None type_hint gracefully."""
+    field_info = _create_field_info(
+        name="unknown",
+        type_hint=None,
+        has_default=True,
+        default_value="default",
+    )
+
+    assert field_info.name == "unknown"
+    assert field_info.type_hint is None
+    assert field_info.is_injectable is False
+    assert field_info.inner_type is None
+    assert field_info.is_protocol is False
+    assert field_info.has_default is True
+    assert field_info.default_value == "default"
+
+
+def test_create_field_info_injectable_with_default():
+    """_create_field_info() handles Injectable fields that also have defaults."""
+    field_info = _create_field_info(
+        name="optional_db",
+        type_hint=Injectable[Database],
+        has_default=True,
+        default_value=Database(),
+    )
+
+    assert field_info.name == "optional_db"
+    assert field_info.is_injectable is True
+    assert field_info.inner_type is Database
+    assert field_info.has_default is True
+    assert isinstance(field_info.default_value, Database)
+
+
+def test_create_field_info_returns_field_info_instance():
+    """_create_field_info() returns a FieldInfo instance."""
+    result = _create_field_info(
+        name="test",
+        type_hint=str,
+        has_default=False,
+        default_value=None,
+    )
+
+    assert isinstance(result, FieldInfo)

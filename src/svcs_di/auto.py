@@ -61,7 +61,7 @@ class DefaultInjector:
 
     Uses two-tier precedence for value resolution:
     1. container.get(T) or container.get_abstract(T) for Injectable[T] fields
-    2. default values from parameter/field definition
+    2. Default values from parameter/field definition
 
     Note: **kwargs is accepted for protocol compliance but is ignored.
     For kwargs override support, use KeywordInjector from svcs_di.injectors.

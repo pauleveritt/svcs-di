@@ -3,7 +3,7 @@
 This example demonstrates using protocols for abstract dependencies:
 - Define a Protocol for a service interface
 - Provide a concrete implementation
-- Use Injectable[ProtocolType] for loose coupling
+- Use Inject[ProtocolType] for loose coupling
 """
 
 from dataclasses import dataclass
@@ -11,7 +11,7 @@ from typing import Protocol
 
 import svcs
 
-from svcs_di import Injectable, auto
+from svcs_di import Inject, auto
 
 
 class GreeterProtocol(Protocol):
@@ -40,7 +40,7 @@ class SpanishGreeter:
 class Application:
     """Application that depends on a greeter (via protocol)."""
 
-    greeter: Injectable[GreeterProtocol]
+    greeter: Inject[GreeterProtocol]
     app_name: str = "MyApp"
 
 

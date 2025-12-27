@@ -1,11 +1,11 @@
-"""Tests for Injectable marker and type introspection."""
+"""Tests for Inject marker and type introspection."""
 
 from dataclasses import dataclass
 from typing import Protocol
 
 
 from svcs_di.auto import (
-    Injectable,
+    Inject,
     extract_inner_type,
     get_field_infos,
     is_injectable,
@@ -31,16 +31,16 @@ class Config:
 
 
 def test_injectable_wraps_type():
-    """Injectable[T] can wrap any type T."""
-    # Injectable is just a type alias, so we test type extraction
-    assert extract_inner_type(Injectable[Database]) is Database
-    assert extract_inner_type(Injectable[str]) is str
-    assert extract_inner_type(Injectable[GreeterProtocol]) is GreeterProtocol
+    """Inject[T] can wrap any type T."""
+    # Inject is just a type alias, so we test type extraction
+    assert extract_inner_type(Inject[Database]) is Database
+    assert extract_inner_type(Inject[str]) is str
+    assert extract_inner_type(Inject[GreeterProtocol]) is GreeterProtocol
 
 
 def test_is_injectable_detection():
-    """Detect if a type is wrapped in Injectable."""
-    assert is_injectable(Injectable[Database]) is True
+    """Detect if a type is wrapped in Inject."""
+    assert is_injectable(Inject[Database]) is True
     assert is_injectable(Database) is False
     assert is_injectable(str) is False
 
@@ -53,11 +53,11 @@ def test_protocol_detection():
 
 
 def test_extract_inner_type_from_injectable():
-    """Extract inner type from Injectable[T]."""
-    inner = extract_inner_type(Injectable[Database])
+    """Extract inner type from Inject[T]."""
+    inner = extract_inner_type(Inject[Database])
     assert inner is Database
 
-    inner_protocol = extract_inner_type(Injectable[GreeterProtocol])
+    inner_protocol = extract_inner_type(Inject[GreeterProtocol])
     assert inner_protocol is GreeterProtocol
 
 
@@ -66,8 +66,8 @@ def test_get_field_infos_dataclass():
 
     @dataclass
     class TestClass:
-        db: Injectable[Database]
-        config: Injectable[Config]
+        db: Inject[Database]
+        config: Inject[Config]
         timeout: int = 30
 
     fields = get_field_infos(TestClass)
@@ -88,8 +88,8 @@ def test_get_field_infos_function():
     """Extract parameter info from function."""
 
     def create_service(
-        db: Injectable[Database],
-        greeter: Injectable[GreeterProtocol],
+        db: Inject[Database],
+        greeter: Inject[GreeterProtocol],
         timeout: int = 30,
     ):
         pass
@@ -133,7 +133,7 @@ def test_dataclass_with_default_factory():
     @dataclass
     class ServiceWithFactory:
         items: list[str] = field(default_factory=list)
-        db: Injectable[Database] = field(default=None)  # type: ignore[assignment]
+        db: Inject[Database] = field(default=None)  # type: ignore[assignment]
 
     fields = get_field_infos(ServiceWithFactory)
     assert len(fields) == 2
@@ -147,13 +147,13 @@ def test_dataclass_with_default_factory():
 
 
 def test_multiple_injectable_dependencies():
-    """Handle multiple Injectable dependencies in single class."""
+    """Handle multiple Inject dependencies in single class."""
 
     @dataclass
     class MultiDepService:
-        db: Injectable[Database]
-        config: Injectable[Config]
-        greeter: Injectable[GreeterProtocol]
+        db: Inject[Database]
+        config: Inject[Config]
+        greeter: Inject[GreeterProtocol]
         timeout: int = 30
 
     fields = get_field_infos(MultiDepService)
@@ -168,10 +168,10 @@ def test_mixed_injectable_and_required_params():
 
     @dataclass
     class MixedService:
-        db: Injectable[Database]  # Injectable, no default
+        db: Inject[Database]  # Inject, no default
         required_name: str  # Required, not injectable
         optional_timeout: int = 30  # Optional, not injectable
-        optional_config: Injectable[Config] = None  # type: ignore[assignment]  # Injectable with default
+        optional_config: Inject[Config] = None  # type: ignore[assignment]  # Inject with default
 
     fields = get_field_infos(MixedService)
     assert len(fields) == 4

@@ -424,7 +424,7 @@ Recommended implementation sequence:
 - Registration-time validation of implementations
 - Resource lifecycle management
 - Middleware integration or hooks
-- Changes to Injectable[T] field resolution logic beyond terminology
+- Changes to Inject[T] field resolution logic beyond terminology
 - Modification of svcs.Container or svcs.Registry behavior
 
 ## Summary

@@ -6,7 +6,7 @@ three-tier precedence for dependency injection with kwargs override support.
 
 KeywordInjector provides three-tier precedence:
 1. kwargs passed to injector (highest priority)
-2. container.get(T) for Injectable[T] fields
+2. container.get(T) for Inject[T] fields
 3. default values from field definitions (lowest priority)
 
 This module also exports the @injectable decorator for marking classes and

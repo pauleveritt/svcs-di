@@ -8,7 +8,7 @@ Key Features Demonstrated:
 - Multiple implementations per service type
 - Resource-based resolution with three-tier precedence
 - LIFO ordering (later registrations override earlier ones)
-- HopscotchInjector integration with Injectable[T]
+- HopscotchInjector integration with Inject[T]
 - Dynamic resource resolution from container
 """
 
@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.locator import (
     HopscotchInjector,
     ServiceLocator,
@@ -124,7 +124,7 @@ class TestDB(Database):
 
 
 # ============================================================================
-# Application Services Using Injectable[T]
+# Application Services Using Inject[T]
 # ============================================================================
 
 
@@ -132,8 +132,8 @@ class TestDB(Database):
 class WelcomeService:
     """Service that uses greeting and database via dependency injection."""
 
-    greeting: Injectable[Greeting]
-    database: Injectable[Database]
+    greeting: Inject[Greeting]
+    database: Inject[Database]
 
     def welcome_user(self, username: str) -> str:
         """Welcome a user with resource-appropriate greeting."""
@@ -236,7 +236,7 @@ def example_lifo_override():
     # Use a service that depends on Greeting to demonstrate LIFO
     @dataclass
     class SimpleService:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     service = injector(SimpleService)
     print(f"\nResult: Got {type(service.greeting).__name__}")
@@ -278,7 +278,7 @@ def example_three_tier_precedence():
 
     @dataclass
     class TestService:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     service = injector(TestService)
     print(f"  Got: {type(service.greeting).__name__}")

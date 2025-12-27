@@ -27,7 +27,7 @@ More specific locations (deeper in hierarchy) always take precedence over less s
 Location as Special Service:
 - `Location` (aliased from `PurePath`) represents hierarchical request context
 - Containers can have Location registered as a value service: `registry.register_value(Location, PurePath("/admin"))`
-- Services can depend on Location via `Injectable[Location]` to access current request location
+- Services can depend on Location via `Inject[Location]` to access current request location
 - The Location service represents "where" the current request is happening in the application hierarchy
 - PurePath is immutable and thread-safe, compatible with free-threaded Python
 - Supports hierarchy operations: `.parents` for traversal, `.is_relative_to()` for relationships
@@ -54,10 +54,10 @@ The scanning functionality provides a venusian-inspired decorator pattern that:
 - Supports resource-based registrations with @injectable(resource=...)
 - Supports location-based registrations with @injectable(location=PurePath(...))
 - Supports combined resource+location: @injectable(resource=X, location=PurePath(...))
-- Works seamlessly with Injectable[T] dependency injection
+- Works seamlessly with Inject[T] dependency injection
 
 Also includes HopscotchInjector which extends KeywordInjector to support automatic
-locator-based resolution for Injectable[T] fields with multiple implementations.
+locator-based resolution for Inject[T] fields with multiple implementations.
 
 Examples:
     >>> # Setup for doctests
@@ -176,7 +176,7 @@ Usage:
     # Services depend on Location
     @dataclass
     class MyService:
-        location: Injectable[Location]
+        location: Inject[Location]
 
     # Use Location for hierarchical matching
     admin_location = PurePath("/admin")
@@ -514,10 +514,10 @@ class HopscotchInjector:
 
     Implements three-tier precedence for value resolution:
     1. kwargs passed to injector (highest priority - overrides everything)
-    2. ServiceLocator for Injectable[T] types with multiple implementations, falling back to container.get(T)
+    2. ServiceLocator for Inject[T] types with multiple implementations, falling back to container.get(T)
     3. default values from field definitions (lowest priority)
 
-    When resolving Injectable[T] fields, it first tries ServiceLocator.get_implementation()
+    When resolving Inject[T] fields, it first tries ServiceLocator.get_implementation()
     with resource and location obtained from container. If no locator or no matching implementation is found,
     falls back to standard container.get(T) or container.get_abstract(T) behavior.
     """
@@ -572,11 +572,11 @@ class HopscotchInjector:
         if field_name in kwargs:
             return (True, kwargs[field_name])
 
-        # Tier 2: Injectable from container (with locator support)
+        # Tier 2: Inject from container (with locator support)
         if field_info.is_injectable:
             inner_type = field_info.inner_type
             if inner_type is None:
-                raise TypeError(f"Injectable field '{field_name}' has no inner type")
+                raise TypeError(f"Inject field '{field_name}' has no inner type")
 
             # Check for Container injection first (bypasses locator)
             if inner_type is svcs.Container:
@@ -633,7 +633,7 @@ class HopscotchInjector:
 
         Raises:
             ValueError: If unknown kwargs are provided
-            TypeError: If an Injectable field has no inner type
+            TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)
         self._validate_kwargs(target, field_infos, kwargs)
@@ -653,11 +653,11 @@ class HopscotchAsyncInjector:
     Async version of HopscotchInjector.
 
     Like HopscotchInjector but uses async container methods (aget, aget_abstract)
-    for resolving Injectable[T] dependencies.
+    for resolving Inject[T] dependencies.
 
     Implements the same three-tier precedence as HopscotchInjector:
     1. kwargs passed to injector (highest priority)
-    2. ServiceLocator for Injectable[T] types, falling back to container.aget(T)
+    2. ServiceLocator for Inject[T] types, falling back to container.aget(T)
     3. default values from field definitions (lowest priority)
     """
 
@@ -709,11 +709,11 @@ class HopscotchAsyncInjector:
         if field_name in kwargs:
             return (True, kwargs[field_name])
 
-        # Tier 2: Injectable from container (async, with locator support)
+        # Tier 2: Inject from container (async, with locator support)
         if field_info.is_injectable:
             inner_type = field_info.inner_type
             if inner_type is None:
-                raise TypeError(f"Injectable field '{field_name}' has no inner type")
+                raise TypeError(f"Inject field '{field_name}' has no inner type")
 
             # Check for Container injection first (bypasses locator)
             if inner_type is svcs.Container:
@@ -770,7 +770,7 @@ class HopscotchAsyncInjector:
 
         Raises:
             ValueError: If unknown kwargs are provided
-            TypeError: If an Injectable field has no inner type
+            TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)
         self._validate_kwargs(target, field_infos, kwargs)

@@ -1,8 +1,8 @@
 """Keyword Injector example with three-tier precedence.
 
 This example demonstrates KeywordInjector's three-tier precedence for dependency resolution:
-1. kwargs (highest) - override everything, including Injectable params
-2. container lookup - for Injectable[T] parameters only
+1. kwargs (highest) - override everything, including Inject params
+2. container lookup - for Inject[T] parameters only
 3. default values - from parameter/field definitions
 
 KeywordInjector is extracted from DefaultInjector to provide kwargs override support.
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import Injectable
+from svcs_di import Inject
 from svcs_di.injectors import KeywordInjector
 
 
@@ -29,7 +29,7 @@ class Database:
 class Service:
     """A service with injectable and non-injectable parameters."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
     debug: bool = False
 
@@ -63,8 +63,8 @@ def main():
     print(f"  Debug: {service2.debug}")  # Default value
     print()
 
-    # Case 3: Override Injectable parameter for testing (Tier 1 > Tier 2)
-    print("Case 3: Override Injectable db for testing (Tier 1 > Tier 2)")
+    # Case 3: Override Inject parameter for testing (Tier 1 > Tier 2)
+    print("Case 3: Override Inject db for testing (Tier 1 > Tier 2)")
     test_db = Database(host="localhost", port=5432)
     service3 = injector(Service, db=test_db, debug=True)
     assert isinstance(service3.db, Database)  # Type guard

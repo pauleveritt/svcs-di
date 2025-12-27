@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import Injectable, auto, auto_async
+from svcs_di import Inject, auto, auto_async
 
 
 @dataclass
@@ -33,8 +33,8 @@ class Cache:
 class AsyncService:
     """A service with both sync and async dependencies."""
 
-    db: Injectable[Database]
-    cache: Injectable[Cache]
+    db: Inject[Database]
+    cache: Inject[Cache]
     timeout: int = 30
 
 

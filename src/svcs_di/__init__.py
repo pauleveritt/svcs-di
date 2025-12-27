@@ -2,12 +2,12 @@
 svcs-di: Minimal automatic dependency injection helper for svcs.
 
 This package provides a thin layer on top of svcs for automatic dependency
-resolution based on type hints, with explicit opt-in via the Injectable[T] marker.
+resolution based on type hints, with explicit opt-in via the Inject[T] marker.
 
 Key exports:
 - auto: Factory function generator for automatic dependency injection
 - auto_async: Async factory function generator for async dependencies
-- Injectable: Type marker for parameters that should be injected from container
+- Inject: Type marker for parameters that should be injected from container
 - Injector: Protocol defining the injector interface
 - AsyncInjector: Protocol defining the async injector interface
 - DefaultInjector: Default synchronous injector implementation
@@ -20,7 +20,7 @@ from svcs_di.auto import (
     AsyncInjector,
     DefaultAsyncInjector,
     DefaultInjector,
-    Injectable,
+    Inject,
     Injector,
     TypeHintResolutionError,  # type: ignore[attr-defined]
     auto,
@@ -31,7 +31,7 @@ from svcs_di.injectors import KeywordAsyncInjector, KeywordInjector
 __all__ = [
     "auto",
     "auto_async",
-    "Injectable",
+    "Inject",
     "Injector",
     "AsyncInjector",
     "DefaultInjector",

@@ -195,7 +195,7 @@ This feature implements multiple service registrations with metadata-driven reso
     - Test dataclass structure with container field
     - Test kwargs validation against field_infos
     - Test three-tier resolution: kwargs > container > defaults
-    - Test Injectable field resolution via container.get/get_abstract
+    - Test Inject field resolution via container.get/get_abstract
     - Test async version with aget/aget_abstract
     - Test unknown parameter rejection
   - [x] 4.2 Implement HopscotchInjector (implemented as ServiceLocator in src/svcs_di/injectors/locator.py lines 135-252)
@@ -203,7 +203,7 @@ This feature implements multiple service registrations with metadata-driven reso
     - Implement _validate_kwargs to reject unknown parameters
     - Implement _resolve_field_value_sync for three-tier resolution
     - Tier 1: kwargs (highest priority)
-    - Tier 2: locator.get() for Injectable fields (using context from container)
+    - Tier 2: locator.get() for Inject fields (using context from container)
     - Tier 3: default values from field definitions
     - Implement __call__ to construct target with resolved dependencies
     - Use get_field_infos from svcs_di.auto for introspection
@@ -227,7 +227,7 @@ This feature implements multiple service registrations with metadata-driven reso
 - HopscotchAsyncInjector provides async version with aget methods ✅
 - Kwargs validation ensures unknown parameters are rejected ✅
 - Both injectors use get_field_infos for field introspection ✅
-- Injectable fields resolved via container.get/get_abstract ✅
+- Inject fields resolved via container.get/get_abstract ✅
 
 **Implementation Notes:**
 - Follow KeywordInjector pattern very closely ✅

@@ -17,7 +17,7 @@ Then later, in the more-advanced injector, how can we allow **replaceable** comp
 - Minimal approach
   - Register a `FunctionInjector`
   - `tdom` can use it when the component is a function
-  - The component function can then have parameters that are `Injectable`
+  - The component function can then have parameters that are `Inject`
   - But this means function components can't be "replaceable" without a decorator and a protocol
 
 ## To Do

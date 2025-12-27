@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.decorators import injectable
 
 # Import from other nested modules to show cross-module dependencies
@@ -18,8 +18,8 @@ class UserRepository:
     Demonstrates cross-module dependencies within nested structure.
     """
 
-    db: Injectable[DatabaseConnection]
-    cache: Injectable[CacheService]
+    db: Inject[DatabaseConnection]
+    cache: Inject[CacheService]
 
     def get_user(self, user_id: int) -> str:
         """Get user with database and cache."""

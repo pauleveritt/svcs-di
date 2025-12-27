@@ -2,7 +2,7 @@
 Minimal svcs.auto() helper for automatic dependency injection.
 
 This module provides a thin layer on top of svcs for automatic dependency resolution
-based on type hints, with explicit opt-in via the Injectable[T] marker.
+based on type hints, with explicit opt-in via the Inject[T] marker.
 
 Requires Python 3.14+ for PEP 695 generic syntax (class Generic[T]:) and modern
 type parameter features.
@@ -68,10 +68,10 @@ class AsyncInjector(Protocol):
 @dataclasses.dataclass(frozen=True)
 class DefaultInjector:
     """
-    Default dependency injector. Resolves Injectable[T] fields from container.
+    Default dependency injector. Resolves Inject[T] fields from container.
 
     Uses two-tier precedence for value resolution:
-    1. container.get(T) or container.get_abstract(T) for Injectable[T] fields
+    1. container.get(T) or container.get_abstract(T) for Inject[T] fields
     2. Default values from parameter/field definition
 
     For kwargs override support, use KeywordInjector from svcs_di.injectors.
@@ -98,7 +98,7 @@ class DefaultAsyncInjector:
     Default async dependency injector. Like DefaultInjector but for async dependencies.
 
     Uses two-tier precedence for value resolution:
-    1. container.aget(T) or container.aget_abstract(T) for Injectable[T] fields
+    1. container.aget(T) or container.aget_abstract(T) for Inject[T] fields
     2. default values from parameter/field definition
 
     For kwargs override support, use KeywordAsyncInjector from svcs_di.injectors.
@@ -122,16 +122,16 @@ class DefaultAsyncInjector:
 
 
 # ============================================================================
-# Injectable Marker
+# Inject Marker
 # ============================================================================
 
 
-class Injectable[T]:
+class Inject[T]:
     """
     Marker type for dependency injection.
 
-    Use Injectable[T] to mark a parameter/field that should be automatically
-    resolved from the svcs container. Only parameters marked with Injectable
+    Use Inject[T] to mark a parameter/field that should be automatically
+    resolved from the svcs container. Only parameters marked with Inject
     will be injected.
 
     Two-tier precedence for value resolution (DefaultInjector):
@@ -146,18 +146,18 @@ class Injectable[T]:
     Type Checking:
     --------------
     At runtime, this is a marker class. At type-checking time, the accompanying
-    auto.pyi stub file provides `type Injectable[T] = T`, making type checkers
-    understand that Injectable[Greeting] has all attributes of Greeting.
+    auto.pyi stub file provides `type Inject[T] = T`, making type checkers
+    understand that Inject[Greeting] has all attributes of Greeting.
 
     This dual-representation approach (runtime marker + type stub) enables:
-    - Runtime detection via get_origin(Injectable[T])
+    - Runtime detection via get_origin(Inject[T])
     - Type-safe attribute access without cast()
 
     Example:
         @dataclass
         class WelcomeService:
-            greeting: Injectable[Greeting]  # Type checkers see: Greeting
-            database: Injectable[Database]  # Type checkers see: Database
+            greeting: Inject[Greeting]  # Type checkers see: Greeting
+            database: Inject[Database]  # Type checkers see: Database
 
         service = injector(WelcomeService)
         service.greeting.greet("World")  # ✓ Type checker knows about greet()
@@ -185,12 +185,12 @@ class FieldInfo(NamedTuple):
 
 
 def is_injectable(type_hint: Any) -> bool:
-    """Check if a type hint is Injectable[T]."""
-    return get_origin(type_hint) is Injectable
+    """Check if a type hint is Inject[T]."""
+    return get_origin(type_hint) is Inject
 
 
 def extract_inner_type(type_hint: Any) -> type | None:
-    """Extract the inner type from Injectable[T]."""
+    """Extract the inner type from Inject[T]."""
     if not is_injectable(type_hint):
         return None
     return args[0] if (args := get_args(type_hint)) else None
@@ -211,7 +211,7 @@ def _create_field_info(
     Create a FieldInfo instance from field/parameter metadata.
 
     This helper encapsulates the common logic for processing type hints
-    and determining Injectable, protocol, and default value information.
+    and determining Inject, protocol, and default value information.
     """
     injectable = is_injectable(type_hint)
     inner = extract_inner_type(type_hint) if injectable else None
@@ -360,14 +360,14 @@ def _resolve_field_value(
     Resolve a single field's value using two-tier precedence.
 
     Two-tier precedence:
-    1. container.get(T) or container.get_abstract(T) for Injectable[T] fields
+    1. container.get(T) or container.get_abstract(T) for Inject[T] fields
     2. default values from field definition
     """
-    # Tier 1: Injectable from container
+    # Tier 1: Inject from container
     if field_info.is_injectable:
         inner_type = field_info.inner_type
         if inner_type is None:
-            raise TypeError(f"Injectable field '{field_info.name}' has no inner type")
+            raise TypeError(f"Inject field '{field_info.name}' has no inner type")
 
         # Check for Container injection first
         if inner_type is svcs.Container:
@@ -398,14 +398,14 @@ async def _resolve_field_value_async(
     Async version of _resolve_field_value using two-tier precedence.
 
     Two-tier precedence:
-    1. container.aget(T) or container.aget_abstract(T) for Injectable[T] fields
+    1. container.aget(T) or container.aget_abstract(T) for Inject[T] fields
     2. default values from field definition
     """
-    # Tier 1: Injectable from container (async)
+    # Tier 1: Inject from container (async)
     if field_info.is_injectable:
         inner_type = field_info.inner_type
         if inner_type is None:
-            raise TypeError(f"Injectable field '{field_info.name}' has no inner type")
+            raise TypeError(f"Inject field '{field_info.name}' has no inner type")
 
         # Check for Container injection first
         if inner_type is svcs.Container:
@@ -439,7 +439,7 @@ def auto[T](target: type[T]) -> SvcsFactory[T]:
     Create a factory function for automatic dependency injection.
 
     Returns a factory function compatible with svcs.Registry.register_factory()
-    that automatically resolves Injectable[T] dependencies from the container.
+    that automatically resolves Inject[T] dependencies from the container.
 
     DefaultInjector uses two-tier precedence (container.get, then defaults).
     For kwargs override support, register KeywordInjector as a custom injector:
@@ -488,7 +488,7 @@ def auto_async[T](target: type[T]) -> AsyncSvcsFactory[T]:
 
 __all__ = [
     "TypeHintResolutionError",
-    "Injectable",
+    "Inject",
     "Injector",
     "AsyncInjector",
     "DefaultInjector",

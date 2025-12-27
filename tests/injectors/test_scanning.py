@@ -6,7 +6,7 @@ from pathlib import Path
 
 import svcs
 
-from svcs_di.auto import DefaultInjector, Injectable
+from svcs_di.auto import DefaultInjector, Inject
 from svcs_di.injectors.locator import HopscotchInjector, ServiceLocator, scan
 
 # Add test_fixtures to path so we can import test modules
@@ -331,16 +331,16 @@ def test_decorated_services_with_context_resolution():
 
 def test_decorated_classes_with_injectable_fields():
     """
-    Test decorated classes with Injectable[T] fields resolve correctly via HopscotchInjector.
+    Test decorated classes with Inject[T] fields resolve correctly via HopscotchInjector.
 
-    Task 4.4: Injectable[T] fields in decorated classes resolve via existing logic
+    Task 4.4: Inject[T] fields in decorated classes resolve via existing logic
     """
     from tests.test_fixtures.scanning_test_package.service_a import ServiceA
 
     # Define a service that depends on ServiceA
     @dataclass
     class CompositeService:
-        dependency: Injectable[ServiceA]
+        dependency: Inject[ServiceA]
         name: str = "Composite"
 
     # Scan to register ServiceA
@@ -357,7 +357,7 @@ def test_decorated_classes_with_injectable_fields():
     # Create container
     container = svcs.Container(registry)
 
-    # Get CompositeService - should resolve ServiceA via Injectable[T]
+    # Get CompositeService - should resolve ServiceA via Inject[T]
     service = container.get(CompositeService)
 
     # Verify dependency was injected

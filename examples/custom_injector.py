@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import DefaultInjector, Injectable, auto
+from svcs_di import DefaultInjector, Inject, auto
 
 
 @dataclass
@@ -26,7 +26,7 @@ class Database:
 class Service:
     """A service that depends on a database."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
 
 
@@ -121,7 +121,7 @@ def main():
     @dataclass
     class InvalidService:
         """A service with an invalid default timeout."""
-        db: Injectable[Database]
+        db: Inject[Database]
         timeout: int = -10  # Invalid!
 
     registry3 = svcs.Registry()

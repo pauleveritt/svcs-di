@@ -8,28 +8,28 @@ Total Tasks: 32 sub-tasks across 4 major task groups
 
 ### Core Infrastructure
 
-#### Task Group 1: Injectable Marker and Type Introspection
+#### Task Group 1: Inject Marker and Type Introspection
 
 **Dependencies:** None
 
 - [x] 1.0 Complete core type infrastructure
-    - [x] 1.1 Write 2-8 focused tests for Injectable marker and type introspection
+    - [x] 1.1 Write 2-8 focused tests for Inject marker and type introspection
         - Limit to 2-8 highly focused tests maximum
-        - Test only critical behaviors: Injectable generic wrapping, type extraction from Injectable, protocol detection
+        - Test only critical behaviors: Inject generic wrapping, type extraction from Inject, protocol detection
         - Skip exhaustive coverage of all edge cases
-    - [x] 1.2 Create `Injectable[T]` generic type marker
+    - [x] 1.2 Create `Inject[T]` generic type marker
         - Define as `TypeAlias` or `Generic` wrapper
         - Must preserve the inner type T for runtime extraction
-        - Example: `db: Injectable[Database]` marks db as injectable
+        - Example: `db: Inject[Database]` marks db as injectable
     - [x] 1.3 Implement type extraction utilities
-        - Function to extract inner type from `Injectable[T]`
-        - Function to detect if a type is wrapped in `Injectable`
-        - Handle `Optional[Injectable[T]]` and similar nested generics
+        - Function to extract inner type from `Inject[T]`
+        - Function to detect if a type is wrapped in `Inject`
+        - Handle `Optional[Inject[T]]` and similar nested generics
     - [x] 1.4 Implement protocol detection utility
-        - Use `typing.get_origin()` and `typing.get_args()` to unwrap Injectable
+        - Use `typing.get_origin()` and `typing.get_args()` to unwrap Inject
         - Use `inspect.isclass()` and check for `_is_protocol` attribute
         - Alternative: use `typing.get_protocol_members()` if available in Python 3.12+
-        - Return True if inner type of `Injectable[T]` is a Protocol
+        - Return True if inner type of `Inject[T]` is a Protocol
     - [x] 1.5 Implement parameter/field introspection
         - For functions: use `inspect.signature()` + `typing.get_type_hints(eval_str=True)`
         - For dataclasses: use `dataclasses.fields()` + `typing.get_type_hints(eval_str=True)`
@@ -39,15 +39,15 @@ Total Tasks: 32 sub-tasks across 4 major task groups
         - Handle forward references with graceful fallback (try eval_str=True, then without)
     - [x] 1.6 Ensure core infrastructure tests pass
         - Run ONLY the 2-8 tests written in 1.1
-        - Verify Injectable marker works correctly
+        - Verify Inject marker works correctly
         - Verify type extraction and protocol detection work
         - Do NOT run the entire test suite at this stage
 
 **Acceptance Criteria:**
 
 - The 2-8 tests written in 1.1 pass
-- `Injectable[T]` can wrap any type T
-- Type extraction correctly unwraps Injectable to get inner type
+- `Inject[T]` can wrap any type T
+- Type extraction correctly unwraps Inject to get inner type
 - Protocol detection correctly identifies Protocol types
 - Parameter introspection works for both functions and dataclasses
 - Field info includes all necessary metadata for dependency resolution
@@ -80,7 +80,7 @@ Update the tasks.md file at `/Users/pauleveritt/projects/pauleveritt/svcs-di/age
         - Extract field infos from target using utilities from Task 1.5
         - For each field, resolve value using precedence:
             1. If field name in kwargs, use kwargs value (highest precedence)
-            2. Else if field is Injectable, resolve from container:
+            2. Else if field is Inject, resolve from container:
                 - If is_protocol: use `container.get_abstract(inner_type)`
                 - Else: use `container.get(inner_type)`
             3. Else if field has default, use default value
@@ -139,12 +139,12 @@ Update the tasks.md file at `/Users/pauleveritt/projects/pauleveritt/svcs-di/age
         - Support both sync and async factories automatically
     - [x] 3.4 Add factory wrapping for async detection
         - Make factory async if target requires async dependencies
-        - Detect by checking if any Injectable field would return awaitable
+        - Detect by checking if any Inject field would return awaitable
         - Alternatively: create sync factory that becomes async if needed
         - Follow svcs pattern: `aget()` works with both sync and async factories
     - [x] 3.5 Add module exports to `svcs_di/__init__.py`
         - Export `auto` function
-        - Export `Injectable` marker type
+        - Export `Inject` marker type
         - Export `Injector` protocol (for custom injector implementations)
         - Add `__all__` list for explicit public API
     - [x] 3.6 Ensure auto() factory tests pass
@@ -181,7 +181,7 @@ Update the tasks.md file at `/Users/pauleveritt/projects/pauleveritt/svcs-di/age
         - Prioritize end-to-end workflows and edge cases
         - Key areas to check:
             - Function parameters vs dataclass fields
-            - Multiple Injectable dependencies
+            - Multiple Inject dependencies
             - Mixed injectable/non-injectable parameters
             - Protocol-based dependencies
             - Error conditions (missing services, invalid kwargs)
@@ -194,12 +194,12 @@ Update the tasks.md file at `/Users/pauleveritt/projects/pauleveritt/svcs-di/age
         - Cover: dataclass injection, function injection, protocol injection, async injection, error cases
     - [x] 4.4 Create working example: basic dataclass injection
         - File: `examples/basic_dataclass.py`
-        - Demonstrate: simple dataclass with Injectable dependencies
+        - Demonstrate: simple dataclass with Inject dependencies
         - Show: registration with auto(), retrieval with get()
         - Keep minimal (10-20 lines)
     - [x] 4.5 Create working example: protocol-based injection
         - File: `examples/protocol_injection.py`
-        - Demonstrate: Injectable[ProtocolType] usage
+        - Demonstrate: Inject[ProtocolType] usage
         - Show: abstract service registration and retrieval
         - Include: implementation and protocol
     - [x] 4.6 Create working example: async injection
@@ -210,7 +210,7 @@ Update the tasks.md file at `/Users/pauleveritt/projects/pauleveritt/svcs-di/age
     - [x] 4.7 Create working example: kwargs override
         - File: `examples/kwargs_override.py`
         - Demonstrate: precedence order (kwargs > container > defaults)
-        - Show: overriding Injectable parameters via kwargs
+        - Show: overriding Inject parameters via kwargs
         - Include: test-friendly pattern for dependency injection
     - [x] 4.8 Create working example: custom injector
         - File: `examples/custom_injector.py`
@@ -219,7 +219,7 @@ Update the tasks.md file at `/Users/pauleveritt/projects/pauleveritt/svcs-di/age
         - Include: use case like validation or logging injector
     - [x] 4.9 Add inline documentation
         - Add comprehensive docstrings to all public functions
-        - Document `Injectable` marker usage with examples
+        - Document `Inject` marker usage with examples
         - Document `Injector` protocol with implementation guide
         - Document `auto()` function with usage patterns
         - Include type hints in all signatures
@@ -243,7 +243,7 @@ Update the tasks.md file at `/Users/pauleveritt/projects/pauleveritt/svcs-di/age
 
 Recommended implementation sequence:
 
-1. **Task Group 1: Core Infrastructure** (Injectable marker and type introspection)
+1. **Task Group 1: Core Infrastructure** (Inject marker and type introspection)
     - Build foundation: type marker, extraction utilities, field introspection
     - Creates the building blocks for dependency resolution
     - No dependencies on other groups
@@ -267,7 +267,7 @@ Recommended implementation sequence:
 
 ### Key Design Decisions
 
-1. **Explicit Injectable Marker**: Parameters must be explicitly marked with `Injectable[T]` to be injected from
+1. **Explicit Inject Marker**: Parameters must be explicitly marked with `Injectable[T]` to be injected from
    container. This prevents accidental injection and makes dependencies clear in code.
 
 2. **Kwargs Override Everything**: Even `Injectable[T]` parameters can be overridden via kwargs. This enables testing

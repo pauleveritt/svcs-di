@@ -21,7 +21,7 @@ from typing import Protocol
 
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.locator import (
     HopscotchInjector,
     Location,
@@ -116,8 +116,8 @@ class EnhancedAdminGreeting:
 class PageRenderer:
     """Service that depends on both Greeting and Location."""
 
-    greeting: Injectable[Greeting]
-    location: Injectable[Location]
+    greeting: Inject[Greeting]
+    location: Inject[Location]
 
     def render(self, username: str) -> str:
         """Render a page with greeting and location info."""

@@ -22,7 +22,7 @@ from typing import Protocol
 
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import HopscotchInjector, scan
 
@@ -150,8 +150,8 @@ class WelcomeService:
     the resource context at request time.
     """
 
-    greeting: Injectable[Greeting]  # Depends on protocol, not implementation!
-    db: Injectable[Database]
+    greeting: Inject[Greeting]  # Depends on protocol, not implementation!
+    db: Inject[Database]
 
     def welcome_user(self, user_id: int, name: str) -> str:
         """Welcome a user with context-appropriate greeting."""

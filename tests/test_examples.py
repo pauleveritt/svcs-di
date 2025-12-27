@@ -10,7 +10,7 @@ from typing import Protocol
 import pytest
 import svcs
 
-from svcs_di import Injectable, auto, auto_async, DefaultInjector
+from svcs_di import Inject, auto, auto_async, DefaultInjector
 
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
@@ -95,7 +95,7 @@ def test_keyword_first_example():
     assert result.returncode == 0
     assert "Case 1: Normal usage" in result.stdout
     assert "Case 2: Override timeout via kwargs" in result.stdout
-    assert "Case 3: Override Injectable db for testing" in result.stdout
+    assert "Case 3: Override Inject db for testing" in result.stdout
     assert "Case 4: Register KeywordInjector as custom injector" in result.stdout
     assert "Case 5: Kwargs validation" in result.stdout
     assert "Timeout: 30" in result.stdout
@@ -152,9 +152,9 @@ def test_custom_injector_example():
 
 
 def test_missing_dependency_raises_error():
-    """Test that missing Injectable dependency raises appropriate error.
+    """Test that missing Inject dependency raises appropriate error.
 
-    Critical workflow: Attempting to resolve a service when its Injectable
+    Critical workflow: Attempting to resolve a service when its Inject
     dependency is not registered should fail with a clear error.
     """
 
@@ -164,7 +164,7 @@ def test_missing_dependency_raises_error():
 
     @dataclass
     class Service:
-        db: Injectable[Database]
+        db: Inject[Database]
 
     registry = svcs.Registry()
     # Intentionally NOT registering Database
@@ -178,10 +178,10 @@ def test_missing_dependency_raises_error():
 
 
 def test_multiple_injectable_dependencies():
-    """Test service with multiple Injectable parameters.
+    """Test service with multiple Inject parameters.
 
     Critical workflow: Services often depend on multiple other services.
-    Verify all Injectable dependencies are resolved correctly.
+    Verify all Inject dependencies are resolved correctly.
     """
 
     @dataclass
@@ -198,9 +198,9 @@ def test_multiple_injectable_dependencies():
 
     @dataclass
     class ComplexService:
-        db: Injectable[Database]
-        cache: Injectable[Cache]
-        logger: Injectable[Logger]
+        db: Inject[Database]
+        cache: Inject[Cache]
+        logger: Inject[Logger]
         timeout: int = 30
 
     registry = svcs.Registry()
@@ -236,7 +236,7 @@ def test_kwargs_override_with_keyword_injector():
 
     @dataclass
     class Service:
-        db: Injectable[Database]
+        db: Inject[Database]
 
     registry = svcs.Registry()
     registry.register_value(Database, Database(host="prod"))
@@ -269,7 +269,7 @@ def test_protocol_with_incompatible_implementation():
 
     @dataclass
     class Service:
-        reader: Injectable[ReaderProtocol]
+        reader: Inject[ReaderProtocol]
 
     registry = svcs.Registry()
     registry.register_value(ReaderProtocol, BrokenReader())
@@ -303,7 +303,7 @@ def test_async_with_sync_get():
 
     @dataclass
     class Service:
-        db: Injectable[Database]
+        db: Inject[Database]
 
     registry = svcs.Registry()
     registry.register_factory(Database, async_db_factory)
@@ -337,8 +337,8 @@ def test_async_with_mixed_dependencies():
 
     @dataclass
     class MixedService:
-        config: Injectable[SyncConfig]
-        db: Injectable[AsyncDatabase]
+        config: Inject[SyncConfig]
+        db: Inject[AsyncDatabase]
 
     registry = svcs.Registry()
     registry.register_factory(SyncConfig, auto(SyncConfig))
@@ -408,7 +408,7 @@ def test_custom_injector_exception_handling():
 
 
 def test_nested_injectable_dependencies():
-    """Test deeply nested Injectable dependency chains.
+    """Test deeply nested Inject dependency chains.
 
     Critical workflow: Service A depends on B, B depends on C, etc.
     Verify the entire chain is resolved correctly.
@@ -420,15 +420,15 @@ def test_nested_injectable_dependencies():
 
     @dataclass
     class ServiceLevel2:
-        config: Injectable[ConfigLevel3]
+        config: Inject[ConfigLevel3]
 
     @dataclass
     class ServiceLevel1:
-        service: Injectable[ServiceLevel2]
+        service: Inject[ServiceLevel2]
 
     @dataclass
     class TopService:
-        service: Injectable[ServiceLevel1]
+        service: Inject[ServiceLevel1]
         name: str = "top"
 
     registry = svcs.Registry()
@@ -482,7 +482,7 @@ def test_protocol_with_multiple_implementations():
 
     @dataclass
     class Application:
-        storage: Injectable[StorageProtocol]
+        storage: Inject[StorageProtocol]
 
     # Test with MemoryStorage
     registry1 = svcs.Registry()

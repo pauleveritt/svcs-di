@@ -26,7 +26,7 @@ class KeywordInjector:
 
     Implements three-tier precedence for value resolution:
     1. kwargs passed to injector (highest priority - overrides everything)
-    2. container.get(T) or container.get_abstract(T) for Injectable[T] fields
+    2. container.get(T) or container.get_abstract(T) for Inject[T] fields
     3. default values from field definitions (lowest priority)
 
     This is the extracted kwargs functionality from the original DefaultInjector,
@@ -62,13 +62,11 @@ class KeywordInjector:
         if field_name in kwargs:
             return (True, kwargs[field_name])
 
-        # Tier 2: Injectable from container
+        # Tier 2: Inject from container
         if field_info.is_injectable:
             match field_info.inner_type:
                 case None:
-                    raise TypeError(
-                        f"Injectable field '{field_name}' has no inner type"
-                    )
+                    raise TypeError(f"Inject field '{field_name}' has no inner type")
                 case inner_type if inner_type is svcs.Container:
                     # Container injection - inject self.container
                     return True, self.container
@@ -100,7 +98,7 @@ class KeywordInjector:
 
         Raises:
             ValueError: If unknown kwargs are provided
-            TypeError: If an Injectable field has no inner type
+            TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)
         self._validate_kwargs(target, field_infos, kwargs)
@@ -120,12 +118,12 @@ class KeywordAsyncInjector:
     Async dependency injector with kwargs override support.
 
     Like KeywordInjector but uses async container methods (aget, aget_abstract)
-    for resolving Injectable[T] dependencies. Wraps sync logic where possible
+    for resolving Inject[T] dependencies. Wraps sync logic where possible
     to avoid code duplication.
 
     Implements the same three-tier precedence as KeywordInjector:
     1. kwargs passed to injector (highest priority)
-    2. container.aget(T) or container.aget_abstract(T) for Injectable[T] fields
+    2. container.aget(T) or container.aget_abstract(T) for Inject[T] fields
     3. default values from field definitions (lowest priority)
     """
 
@@ -158,13 +156,11 @@ class KeywordAsyncInjector:
         if field_name in kwargs:
             return (True, kwargs[field_name])
 
-        # Tier 2: Injectable from container (async)
+        # Tier 2: Inject from container (async)
         if field_info.is_injectable:
             match field_info.inner_type:
                 case None:
-                    raise TypeError(
-                        f"Injectable field '{field_name}' has no inner type"
-                    )
+                    raise TypeError(f"Inject field '{field_name}' has no inner type")
                 case inner_type if inner_type is svcs.Container:
                     # Container injection - inject self.container
                     return True, self.container
@@ -196,7 +192,7 @@ class KeywordAsyncInjector:
 
         Raises:
             ValueError: If unknown kwargs are provided
-            TypeError: If an Injectable field has no inner type
+            TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)
         self._validate_kwargs(target, field_infos, kwargs)

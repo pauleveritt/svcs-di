@@ -1,4 +1,4 @@
-"""Tests for Injectable[Container] support across all injector types."""
+"""Tests for Inject[Container] support across all injector types."""
 
 import pytest
 import svcs
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from svcs_di.auto import (
     DefaultAsyncInjector,
     DefaultInjector,
-    Injectable,
+    Inject,
 )
 from svcs_di.injectors.keyword import KeywordAsyncInjector, KeywordInjector
 from svcs_di.injectors.locator import (
@@ -33,7 +33,7 @@ class Database:
 class ServiceWithContainer:
     """Service that needs the container for dynamic service resolution."""
 
-    container: Injectable[svcs.Container]
+    container: Inject[svcs.Container]
     name: str = "test"
 
 
@@ -41,7 +41,7 @@ class ServiceWithContainer:
 class ServiceUsingContainer:
     """Service that uses injected container to get other services dynamically."""
 
-    container: Injectable[svcs.Container]
+    container: Inject[svcs.Container]
 
     def get_database(self):
         """Dynamically resolve Database using the injected container."""
@@ -54,7 +54,7 @@ class ServiceUsingContainer:
 
 
 def test_default_injector_injects_container():
-    """DefaultInjector injects self.container when Injectable[Container] is detected."""
+    """DefaultInjector injects self.container when Inject[Container] is detected."""
     registry = svcs.Registry()
     container = svcs.Container(registry)
     injector = DefaultInjector(container=container)
@@ -97,14 +97,14 @@ def test_default_injector_container_with_default_fallback():
 
     service = injector(ServiceWithDefault)
 
-    # No Injectable marker, so default value should be used
+    # No Inject marker, so default value should be used
     assert service.container is None
     assert service.name == "test"
 
 
 @pytest.mark.anyio
 async def test_default_async_injector_injects_container():
-    """DefaultAsyncInjector injects self.container when Injectable[Container] is detected."""
+    """DefaultAsyncInjector injects self.container when Inject[Container] is detected."""
     registry = svcs.Registry()
     container = svcs.Container(registry)
     injector = DefaultAsyncInjector(container=container)
@@ -149,7 +149,7 @@ async def test_default_async_injector_container_with_default_fallback():
 
     service = await injector(ServiceWithDefault)
 
-    # No Injectable marker, so default value should be used
+    # No Inject marker, so default value should be used
     assert service.container is None
     assert service.name == "async-test"
 
@@ -189,7 +189,7 @@ def test_keyword_injector_three_tier_precedence_defaults():
 
     @dataclass
     class ServiceWithContainerDefault:
-        container: Injectable[svcs.Container]
+        container: Inject[svcs.Container]
         name: str = "default-name"
 
     registry = svcs.Registry()
@@ -235,7 +235,7 @@ async def test_keyword_async_injector_three_tier_precedence_defaults():
 
     @dataclass
     class ServiceWithContainerDefault:
-        container: Injectable[svcs.Container]
+        container: Inject[svcs.Container]
         name: str = "async-default-name"
 
     registry = svcs.Registry()

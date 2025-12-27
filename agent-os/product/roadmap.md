@@ -57,7 +57,7 @@
     a `Features` section with subsections that do the same for each directory in `specs`: a heading, a short summary of
     that feature, and a "Read More" link. `M`
 
-13. [x] Inject Container — Get the KeywordInjector and HopscotchInjector to recognize `Injectable[Container]` if present and
+13. [x] Inject Container — Get the KeywordInjector and HopscotchInjector to recognize `Inject[Container]` if present and
     add the `svcs.Container` instance to the arguments. `S`
 
 14. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of

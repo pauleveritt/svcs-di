@@ -101,7 +101,7 @@ a three-tier precedence algorithm, providing the foundation for context-aware an
 - Support kwargs validation against field_infos to ensure unknown parameters are rejected
 - Implement three-tier field resolution: kwargs > container > defaults
 - Use get_field_infos from svcs_di.auto for field introspection
-- Resolve Injectable fields using container.get() or container.get_abstract() for protocols
+- Resolve Inject fields using container.get() or container.get_abstract() for protocols
 - Async version uses container.aget() and container.aget_abstract()
 
 **Container Setup Infrastructure**

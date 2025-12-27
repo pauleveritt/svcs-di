@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import Injectable
+from svcs_di import Inject
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import scan
 
@@ -43,8 +43,8 @@ class Cache:
 class UserRepository:
     """Repository that depends on database and cache."""
 
-    db: Injectable[Database]
-    cache: Injectable[Cache]
+    db: Inject[Database]
+    cache: Inject[Cache]
     table: str = "users"
 
     def get_user(self, user_id: int) -> str:

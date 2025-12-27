@@ -59,7 +59,7 @@ middleware integration.
     - LIFO ordering for overrides
     - Single locator for all service types
     - Support for multiple service types in one locator
-    - HopscotchInjector with Injectable[T] field support
+    - HopscotchInjector with Inject[T] field support
     - Async support via HopscotchAsyncInjector
 
 ### Follow-up Questions
@@ -142,7 +142,7 @@ No visual assets provided.
 - Registration validation beyond current implementation
 - Lifecycle management features
 - Middleware integration
-- Changes to Injectable[T] field resolution logic (keep existing)
+- Changes to Inject[T] field resolution logic (keep existing)
 - Changes to async support (keep existing HopscotchAsyncInjector)
 
 ### Technical Considerations
@@ -159,7 +159,7 @@ No visual assets provided.
 **Existing System Constraints:**
 
 - Must maintain compatibility with svcs.Container and svcs.Registry
-- Must work with existing Injectable[T] type hint system
+- Must work with existing Inject[T] type hint system
 - Must preserve three-tier precedence: exact match (2) > subclass match (1) > default (0)
 - Must preserve LIFO ordering for registrations
 - Must continue to raise LookupError when no implementation matches

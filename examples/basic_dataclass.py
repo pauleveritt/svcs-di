@@ -1,7 +1,7 @@
 """Basic dataclass injection example.
 
 This example demonstrates the simplest use case of svcs-di:
-- Define a dataclass with Injectable dependencies
+- Define a dataclass with Inject dependencies
 - Register services with auto()
 - Retrieve services with automatic dependency resolution
 """
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import Injectable, auto
+from svcs_di import Inject, auto
 
 
 @dataclass
@@ -25,7 +25,7 @@ class Database:
 class Service:
     """A service that depends on a database."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
 
 

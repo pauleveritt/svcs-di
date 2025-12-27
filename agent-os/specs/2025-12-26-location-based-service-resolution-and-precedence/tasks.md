@@ -27,7 +27,7 @@ This feature adds hierarchical location-based service resolution using `pathlib.
   - [x] 1.3 Document PurePath as special service type
     - Add docstring explaining Location/PurePath as special service
     - Explain that containers have Location registered as value service
-    - Document how services depend on Location via `Injectable[Location]`
+    - Document how services depend on Location via `Inject[Location]`
   - [x] 1.4 Ensure location infrastructure tests pass
     - Run ONLY the 2-5 tests written in 1.1
     - Verify PurePath hierarchy operations work correctly
@@ -138,7 +138,7 @@ This feature adds hierarchical location-based service resolution using `pathlib.
 - [x] 4.0 Complete HopscotchInjector integration with Location
   - [x] 4.1 Write 3-6 focused tests for injector integration
     - Test Location registered as value service in container
-    - Test Injectable[Location] dependency resolution
+    - Test Inject[Location] dependency resolution
     - Test HopscotchInjector uses Location during resolution
     - Test three-tier precedence preserved (kwargs > locator+location > defaults)
     - Test services restricted to location (ONLY mode)
@@ -172,13 +172,13 @@ This feature adds hierarchical location-based service resolution using `pathlib.
     - Run ONLY the 3-6 tests written in 4.1
     - Verify Location retrieved from container
     - Verify location passed to ServiceLocator
-    - Verify Injectable[Location] works
+    - Verify Inject[Location] works
     - Verify @injectable(location=...) works with scanning
 
 **Acceptance Criteria:**
 - The 3-6 tests written in 4.1 pass (7 tests created and all passing)
 - Location registered as value service in containers
-- Services can depend on Injectable[Location]
+- Services can depend on Inject[Location]
 - HopscotchInjector retrieves and uses Location during resolution
 - @injectable decorator accepts location parameter
 - scan() discovers and registers location-decorated services

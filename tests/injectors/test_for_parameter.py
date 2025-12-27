@@ -13,7 +13,7 @@ from typing import Protocol
 
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import HopscotchInjector, ServiceLocator, scan
 
@@ -282,7 +282,7 @@ def test_for_with_hopscotch_injector():
     @injectable
     @dataclass
     class WelcomeService:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
         def welcome(self, name: str) -> str:
             return self.greeting.greet(name)  # type: ignore[attr-defined]
@@ -326,7 +326,7 @@ def test_for_with_hopscotch_injector_fallback():
     @injectable
     @dataclass
     class WelcomeService:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
         def welcome(self, name: str) -> str:
             return self.greeting.greet(name)  # type: ignore[attr-defined]
@@ -369,8 +369,8 @@ def test_mixed_for_and_non_for_services():
     @injectable
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
-        db: Injectable[Database]
+        greeting: Inject[Greeting]
+        db: Inject[Database]
 
     registry = svcs.Registry()
     scan(registry, locals_dict=locals())
@@ -438,7 +438,7 @@ def test_for_with_nested_dependencies():
     @injectable(for_=Repository)
     @dataclass
     class DefaultRepository:
-        db: Injectable[Database]
+        db: Inject[Database]
 
         def query(self) -> str:
             return f"Query on {self.db.host}"
@@ -446,7 +446,7 @@ def test_for_with_nested_dependencies():
     @injectable(for_=Repository, resource=CustomerContext)
     @dataclass
     class CustomerRepository:
-        db: Injectable[Database]
+        db: Inject[Database]
 
         def query(self) -> str:
             return f"Customer query on {self.db.host}"
@@ -454,7 +454,7 @@ def test_for_with_nested_dependencies():
     @injectable
     @dataclass
     class Service:
-        repo: Injectable[Repository]
+        repo: Inject[Repository]
 
         def fetch(self) -> str:
             return self.repo.query()  # type: ignore[attr-defined]
@@ -474,7 +474,7 @@ def test_for_with_nested_dependencies():
 
 
 def test_for_with_multiple_injectable_fields():
-    """Test service with multiple Injectable fields using for_."""
+    """Test service with multiple Inject fields using for_."""
 
     class Greeter:
         pass
@@ -501,8 +501,8 @@ def test_for_with_multiple_injectable_fields():
     @injectable
     @dataclass
     class MessageService:
-        greeter: Injectable[Greeter]
-        formatter: Injectable[Formatter]
+        greeter: Inject[Greeter]
+        formatter: Inject[Formatter]
 
         def create_message(self, name: str) -> str:
             greeting = f"{self.greeter.salutation}, {name}!"  # type: ignore[attr-defined]

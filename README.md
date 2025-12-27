@@ -34,7 +34,7 @@ This repo adds an `auto` factory to `svcs` that does simple injection.
 - Register your factory with a wrapped target
 - `auto` looks up the registered injector
 - The injector looks at the target's parameters
-- Parameters marked with `Injectable[SomeService]` are retrieved from container and added to arguments
+- Parameters marked with `Inject[SomeService]` are retrieved from container and added to arguments
 
 ### Quick Start
 
@@ -45,7 +45,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import Injectable, auto
+from svcs_di import Inject, auto
 
 
 @dataclass
@@ -60,7 +60,7 @@ class Database:
 class Service:
     """A service that depends on a database."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
 
 
@@ -82,9 +82,9 @@ def main():
 
 ### Features
 
-- **`Injectable[T]` marker**: Explicitly opt-in to dependency injection by marking parameters/fields with
-  `Injectable[SomeService]`
-- **`auto()` factory wrapper**: Automatically creates svcs-compatible factory functions that resolve `Injectable[T]`
+- **`Inject[T]` marker**: Explicitly opt-in to dependency injection by marking parameters/fields with
+  `Inject[SomeService]`
+- **`auto()` factory wrapper**: Automatically creates svcs-compatible factory functions that resolve `Inject[T]`
   dependencies
 - **`auto_async()` for async support**: Async version of `auto()` for services with async dependencies
 - **Two-tier value resolution**: Automatically resolves values from (1) container services, then (2) parameter defaults
@@ -93,7 +93,7 @@ def main():
 - **Protocol support**: Automatically uses `get_abstract()` for Protocol types, enabling interface-based injection
 - **Dataclass and function support**: Works with both `@dataclass` classes and regular callables
 - **Custom injector support**: Replace `DefaultInjector` with your own implementation via the `Injector` protocol
-- **Type-safe with stubs**: Includes `.pyi` stub file so type checkers understand `Injectable[T]` attributes without
+- **Type-safe with stubs**: Includes `.pyi` stub file so type checkers understand `Inject[T]` attributes without
   requiring `cast()`
 
 ### Testing
@@ -120,7 +120,7 @@ resolution.
 - Register it as a custom injector to enable kwargs override support
 - The injector looks at the target's parameters
 - Parameters can be overridden by kwargs passed to the injector
-- Injectable parameters are resolved from container if not overridden
+- Inject parameters are resolved from container if not overridden
 - Default values are used as final fallback
 
 ### Quick Start
@@ -132,7 +132,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import Injectable, auto
+from svcs_di import Inject, auto
 from svcs_di.injectors import KeywordInjector
 
 
@@ -148,7 +148,7 @@ class Database:
 class DBService:
     """A service that depends on a database."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
 
 
@@ -213,7 +213,7 @@ from pathlib import PurePath
 
 import svcs
 
-from svcs_di import Injectable, auto
+from svcs_di import Inject, auto
 from svcs_di.injectors import HopscotchInjector, ServiceLocator, Location
 
 
@@ -250,7 +250,7 @@ class EmployeeRequestContext(RequestContext):
 class Service:
     """A service that depends on Greeting."""
 
-    greeting: Injectable[Greeting]
+    greeting: Inject[Greeting]
 
 
 def main():
@@ -323,7 +323,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di import Injectable
+from svcs_di import Inject
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import scan
 
@@ -351,8 +351,8 @@ class Cache:
 class UserRepository:
     """Repository that depends on database and cache."""
 
-    db: Injectable[Database]
-    cache: Injectable[Cache]
+    db: Inject[Database]
+    cache: Inject[Cache]
     table: str = "users"
 
     def get_user(self, user_id: int) -> str:
@@ -464,7 +464,7 @@ class EmployeeGreeting:
 @dataclass
 class Service:
     # Depend on the protocol, not specific implementations
-    greeting: Injectable[Greeting]
+    greeting: Inject[Greeting]
 
 
 # Scan and resolve automatically
@@ -486,5 +486,5 @@ service = container.get(Service)  # Gets DefaultGreeting or EmployeeGreeting bas
 - **Multiple implementations**: `@injectable(for_=Protocol)` to register multiple implementations of a common type
 - **ServiceLocator integration**: Resource/location-based decorators automatically use `ServiceLocator`
 - **Direct registry fallback**: Simple `@injectable` without resource/location registers directly to registry
-- **Nested injection**: Works seamlessly with `Injectable[T]` dependency injection
+- **Nested injection**: Works seamlessly with `Inject[T]` dependency injection
 

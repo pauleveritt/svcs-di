@@ -9,7 +9,7 @@ import pytest
 import svcs
 
 from svcs_di.auto import (
-    Injectable,
+    Inject,
     auto,
     auto_async,
     _create_field_info,
@@ -43,7 +43,7 @@ class Database:
 class Service:
     """A service with injectable dependencies."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
 
 
@@ -51,7 +51,7 @@ class Service:
 class NestedService:
     """A service that depends on another service."""
 
-    service: Injectable[Service]
+    service: Inject[Service]
     name: str = "nested"
 
 
@@ -110,7 +110,7 @@ def test_auto_factory_with_protocol():
 
     @dataclass
     class ServiceWithProtocol:
-        greeter: Injectable[GreeterProtocol]
+        greeter: Inject[GreeterProtocol]
         name: str = "test"
 
     registry = svcs.Registry()
@@ -135,7 +135,7 @@ async def test_auto_factory_async():
 
     @dataclass
     class AsyncService:
-        db: Injectable[Database]
+        db: Inject[Database]
         timeout: int = 30
 
     registry = svcs.Registry()
@@ -181,7 +181,7 @@ def test_auto_factory_custom_injector():
 
     @dataclass
     class ServiceWithName:
-        db: Injectable[Database]
+        db: Inject[Database]
         name: str = "original"
 
     def custom_injector_factory(container: svcs.Container) -> CustomInjector:
@@ -240,20 +240,20 @@ def test_complex_nested_dependencies():
 
     @dataclass
     class Database:
-        config: Injectable[Config]
+        config: Inject[Config]
 
     @dataclass
     class Cache:
-        config: Injectable[Config]
+        config: Inject[Config]
 
     @dataclass
     class Repository:
-        db: Injectable[Database]
-        cache: Injectable[Cache]
+        db: Inject[Database]
+        cache: Inject[Cache]
 
     @dataclass
     class Service:
-        repo: Injectable[Repository]
+        repo: Inject[Repository]
         timeout: int = 30
 
     registry = svcs.Registry()
@@ -300,11 +300,11 @@ def test_service_caching_behavior():
 
     @dataclass
     class Consumer1:
-        service: Injectable[CountedService]
+        service: Inject[CountedService]
 
     @dataclass
     class Consumer2:
-        service: Injectable[CountedService]
+        service: Inject[CountedService]
 
     registry = svcs.Registry()
     registry.register_factory(CountedService, auto(CountedService))
@@ -333,13 +333,13 @@ def test_function_vs_dataclass_injection():
     # Dataclass-based service 1
     @dataclass
     class ServiceA:
-        db: Injectable[Database]
+        db: Inject[Database]
         timeout: int = 30
 
     # Dataclass-based service 2 with different fields
     @dataclass
     class ServiceB:
-        db: Injectable[Database]
+        db: Inject[Database]
         port: int = 5432
 
     registry = svcs.Registry()
@@ -366,7 +366,7 @@ def test_missing_required_non_injectable_parameter():
 
     @dataclass
     class ServiceNeedsValue:
-        db: Injectable[Database]
+        db: Inject[Database]
         required_value: str  # No default, not injectable
 
     registry = svcs.Registry()
@@ -408,16 +408,16 @@ def test_create_field_info_non_injectable():
 
 
 def test_create_field_info_injectable_concrete():
-    """_create_field_info() handles Injectable[ConcreteType] fields."""
+    """_create_field_info() handles Inject[ConcreteType] fields."""
     field_info = _create_field_info(
         name="db",
-        type_hint=Injectable[Database],
+        type_hint=Inject[Database],
         has_default=False,
         default_value=None,
     )
 
     assert field_info.name == "db"
-    assert field_info.type_hint == Injectable[Database]
+    assert field_info.type_hint == Inject[Database]
     assert field_info.is_injectable is True
     assert field_info.inner_type is Database
     assert field_info.is_protocol is False
@@ -426,16 +426,16 @@ def test_create_field_info_injectable_concrete():
 
 
 def test_create_field_info_injectable_protocol():
-    """_create_field_info() handles Injectable[Protocol] fields."""
+    """_create_field_info() handles Inject[Protocol] fields."""
     field_info = _create_field_info(
         name="greeter",
-        type_hint=Injectable[GreeterProtocol],
+        type_hint=Inject[GreeterProtocol],
         has_default=False,
         default_value=None,
     )
 
     assert field_info.name == "greeter"
-    assert field_info.type_hint == Injectable[GreeterProtocol]
+    assert field_info.type_hint == Inject[GreeterProtocol]
     assert field_info.is_injectable is True
     assert field_info.inner_type is GreeterProtocol
     assert field_info.is_protocol is True
@@ -482,10 +482,10 @@ def test_create_field_info_none_type_hint():
 
 
 def test_create_field_info_injectable_with_default():
-    """_create_field_info() handles Injectable fields that also have defaults."""
+    """_create_field_info() handles Inject fields that also have defaults."""
     field_info = _create_field_info(
         name="optional_db",
-        type_hint=Injectable[Database],
+        type_hint=Inject[Database],
         has_default=True,
         default_value=Database(),
     )

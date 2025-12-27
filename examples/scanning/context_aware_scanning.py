@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import HopscotchInjector, ServiceLocator, scan
 
@@ -102,7 +102,7 @@ class Database:
 class EmailService:
     """Email service that depends on database."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     from_address: str = "noreply@example.com"
 
     def send_email(self, to: str, subject: str) -> str:
@@ -298,7 +298,7 @@ def main():
     print("  class CustomerGreeting: ...")
     print()
     print("Then consumers depend on Greeting, not specific implementations:")
-    print("  greeting: Injectable[Greeting]  # Resolved automatically!")
+    print("  greeting: Inject[Greeting]  # Resolved automatically!")
     print()
     print("See: examples/scanning/multiple_implementations_with_decorator.py")
     print("=" * 70 + "\n")

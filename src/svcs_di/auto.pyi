@@ -1,7 +1,7 @@
 """
-Type stub file for auto.py that makes Injectable[T] transparent to type checkers.
+Type stub file for auto.py that makes Inject[T] transparent to type checkers.
 
-This .pyi file provides type checking overrides that tell type checkers Injectable[T]
+This .pyi file provides type checking overrides that tell type checkers Inject[T]
 should be treated as T, while the runtime .py file maintains the actual marker class.
 """
 
@@ -22,9 +22,9 @@ class Injector(Protocol):
 class AsyncInjector(Protocol):
     async def __call__[T](self, target: type[T]) -> T: ...
 
-# For type checkers: Injectable[T] is just T
-# This makes type checkers understand that Injectable[Greeting] has all Greeting attributes
-type Injectable[T] = T
+# For type checkers: Inject[T] is just T
+# This makes type checkers understand that Inject[Greeting] has all Greeting attributes
+type Inject[T] = T
 
 class FieldInfo(NamedTuple):
     name: str

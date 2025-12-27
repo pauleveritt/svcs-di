@@ -6,7 +6,7 @@ from pathlib import Path
 
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import ServiceLocator, scan
 
@@ -227,7 +227,7 @@ def test_registration_creates_proper_factory_functions():
     """Test registration creates proper factory functions following auto() pattern."""
     registry = svcs.Registry()
 
-    # Define a service with Injectable dependencies
+    # Define a service with Inject dependencies
     @injectable
     @dataclass
     class ConfigService:
@@ -236,7 +236,7 @@ def test_registration_creates_proper_factory_functions():
     @injectable
     @dataclass
     class DatabaseService:
-        config: Injectable[ConfigService]
+        config: Inject[ConfigService]
 
         def get_connection_string(self) -> str:
             return f"db://{self.config.config_value}"
@@ -303,7 +303,7 @@ def test_registration_with_nested_injection():
     @injectable
     @dataclass
     class Database:
-        logger: Injectable[Logger]
+        logger: Inject[Logger]
 
         def log_query(self, query: str) -> str:
             return f"{self.logger.prefix}: {query}"
@@ -311,7 +311,7 @@ def test_registration_with_nested_injection():
     @injectable
     @dataclass
     class UserService:
-        db: Injectable[Database]
+        db: Inject[Database]
 
         def create_user(self, name: str) -> str:
             return self.db.log_query(f"INSERT INTO users VALUES ('{name}')")

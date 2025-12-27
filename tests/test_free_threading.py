@@ -14,7 +14,7 @@ The tests in this module use multiple concurrent threads to stress-test the foll
 1. ServiceLocator concurrent cache access and registration
 2. HopscotchInjector concurrent service resolution (sync and async)
 3. Decorator and scanning concurrent operations
-4. Injectable[T] field resolution under concurrent access
+4. Inject[T] field resolution under concurrent access
 
 All tests are marked with @pytest.mark.freethreaded and require a free-threaded Python build.
 """
@@ -29,7 +29,7 @@ from typing import Optional
 import pytest
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import (
     HopscotchAsyncInjector,
@@ -291,13 +291,13 @@ class PostgresDB:
 
 @dataclass
 class Service:
-    greeting: Injectable[Greeting]
+    greeting: Inject[Greeting]
 
 
 @dataclass
 class MultiFieldService:
-    greeting: Injectable[Greeting]
-    database: Injectable[Database]
+    greeting: Inject[Greeting]
+    database: Inject[Database]
 
 
 @pytest.mark.freethreaded

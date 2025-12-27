@@ -4,7 +4,7 @@
 Total Task Groups: 5
 Estimated Total Tasks: ~35 sub-tasks
 
-This feature extracts kwargs handling from DefaultInjector into a specialized KeywordInjector, simplifying DefaultInjector to only handle Injectable[T] resolution. Helper functions remain in auto.py to keep DefaultInjector standalone.
+This feature extracts kwargs handling from DefaultInjector into a specialized KeywordInjector, simplifying DefaultInjector to only handle Inject[T] resolution. Helper functions remain in auto.py to keep DefaultInjector standalone.
 
 **IMPORTANT ARCHITECTURE NOTE:** Helper functions STAY in auto.py. Do NOT extract to separate helpers.py file.
 
@@ -51,7 +51,7 @@ This feature extracts kwargs handling from DefaultInjector into a specialized Ke
     - Test only critical KeywordInjector behaviors:
       - Three-tier precedence (kwargs > container > defaults)
       - Kwargs validation (ValueError for unknown params)
-      - Injectable[T] resolution with kwargs override
+      - Inject[T] resolution with kwargs override
       - Protocol-based injection with kwargs
       - Async version with mixed dependencies
     - Skip exhaustive testing of all combinations
@@ -79,7 +79,7 @@ This feature extracts kwargs handling from DefaultInjector into a specialized Ke
     - Loop through field_infos and resolve each field using helper function
     - Implement three-tier precedence:
       1. kwargs[field_name] if present (highest priority)
-      2. container.get(inner_type) or container.get_abstract(inner_type) for Injectable[T]
+      2. container.get(inner_type) or container.get_abstract(inner_type) for Inject[T]
       3. default value from field definition (lowest priority)
     - Construct and return target instance with resolved kwargs
     - Reuse pattern from DefaultInjector.__call__ (lines 83-94)
@@ -131,7 +131,7 @@ This feature extracts kwargs handling from DefaultInjector into a specialized Ke
   - [x] 3.1 Write 2-8 focused tests for simplified DefaultInjector
     - Limit to 2-8 highly focused tests maximum
     - Test only critical DefaultInjector behaviors WITHOUT kwargs:
-      - Injectable[T] resolution from container
+      - Inject[T] resolution from container
       - Protocol-based resolution
       - Default value fallback
       - NO kwargs parameter usage
@@ -145,7 +145,7 @@ This feature extracts kwargs handling from DefaultInjector into a specialized Ke
   - [x] 3.3 Update DefaultInjector class definition
     - Change from `class DefaultInjector(_BaseInjector):` to standalone `@dataclasses.dataclass class DefaultInjector:`
     - Keep `container: svcs.Container` field
-    - Keep docstring updated: "Resolves Injectable[T] fields from container. No kwargs override support."
+    - Keep docstring updated: "Resolves Inject[T] fields from container. No kwargs override support."
   - [x] 3.4 Simplify DefaultInjector.__call__ method
     - Remove `self._validate_kwargs(target, field_infos, kwargs)` call
     - Remove kwargs tier from field resolution
@@ -155,14 +155,14 @@ This feature extracts kwargs handling from DefaultInjector into a specialized Ke
     - Note: **kwargs stays in signature for protocol compliance but is ignored
   - [x] 3.5 Simplify _resolve_field_value function
     - Update function in `auto.py` to remove Tier 1 (kwargs) logic
-    - Keep only Tier 2 (Injectable from container) and Tier 3 (defaults)
+    - Keep only Tier 2 (Inject from container) and Tier 3 (defaults)
     - Remove kwargs parameter from function signature
     - Update signature: `def _resolve_field_value(field_info: FieldInfo, container: svcs.Container) -> tuple[bool, Any]`
     - Update call sites in DefaultInjector.__call__
   - [x] 3.6 Update DefaultAsyncInjector class definition
     - Change from `class DefaultAsyncInjector(_BaseInjector):` to standalone `@dataclasses.dataclass class DefaultAsyncInjector:`
     - Keep `container: svcs.Container` field
-    - Keep docstring updated: "Async version. Resolves Injectable[T] fields from container. No kwargs override support."
+    - Keep docstring updated: "Async version. Resolves Inject[T] fields from container. No kwargs override support."
   - [x] 3.7 Simplify DefaultAsyncInjector.__call__ method
     - Remove `self._validate_kwargs(target, field_infos, kwargs)` call
     - Remove kwargs tier from field resolution
@@ -172,18 +172,18 @@ This feature extracts kwargs handling from DefaultInjector into a specialized Ke
     - Note: **kwargs stays in signature for protocol compliance but is ignored
   - [x] 3.8 Simplify _resolve_field_value_async function
     - Update function in `auto.py` to remove Tier 1 (kwargs) logic
-    - Keep only Tier 2 (Injectable from container) and Tier 3 (defaults)
+    - Keep only Tier 2 (Inject from container) and Tier 3 (defaults)
     - Remove kwargs parameter from function signature
     - Update signature: `async def _resolve_field_value_async(field_info: FieldInfo, container: svcs.Container) -> tuple[bool, Any]`
     - Update call sites in DefaultAsyncInjector.__call__
-  - [x] 3.9 Update Injectable[T] docstring
+  - [x] 3.9 Update Inject[T] docstring
     - Update docstring in `auto.py` (lines 122-134) to reflect two-tier precedence
     - Remove mention of kwargs (Tier 1)
     - Document: "Two-tier precedence: container.get(T), then default values"
     - Note KeywordInjector for kwargs support
   - [x] 3.10 Ensure simplified DefaultInjector tests pass
     - Run ONLY the 2-8 tests written in 3.1
-    - Verify Injectable[T] resolution still works
+    - Verify Inject[T] resolution still works
     - Verify defaults still work
     - Verify kwargs are silently ignored (not an error)
     - Do NOT run the entire test suite at this stage
@@ -335,11 +335,11 @@ All 5 task groups have been successfully implemented and verified:
 
 #### Three-Tier Precedence (KeywordInjector only)
 1. kwargs passed to injector (highest) - override everything
-2. container.get(T) or container.get_abstract(T) for Injectable[T]
+2. container.get(T) or container.get_abstract(T) for Inject[T]
 3. default values from field definitions (lowest)
 
 #### Two-Tier Precedence (DefaultInjector after refactoring)
-1. container.get(T) or container.get_abstract(T) for Injectable[T]
+1. container.get(T) or container.get_abstract(T) for Inject[T]
 2. default values from field definitions
 
 ### Critical Design Decisions

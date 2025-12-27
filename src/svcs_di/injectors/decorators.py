@@ -43,7 +43,7 @@ def _mark_injectable(
     return target
 
 
-class _InjectableDecorator:
+class _InjectDecorator:
     """Supports both @injectable and @injectable(for_=X, resource=Y, location=Z) syntax."""
 
     @overload
@@ -79,4 +79,4 @@ class _InjectableDecorator:
         return decorator  # type: ignore[return-value]
 
 
-injectable = _InjectableDecorator()
+injectable = _InjectDecorator()

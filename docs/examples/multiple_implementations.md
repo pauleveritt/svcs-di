@@ -10,7 +10,7 @@ The multiple implementations feature enables:
 - **Resource-based resolution** - Select implementations based on request context
 - **Three-tier precedence** - Exact context > Subclass context > Default
 - **LIFO ordering** - Later registrations override earlier ones
-- **Seamless integration** - Works with `Injectable[T]` pattern
+- **Seamless integration** - Works with `Inject[T]` pattern
 - **Dynamic context** - Context obtained from container at runtime
 
 ## Core Components
@@ -23,7 +23,7 @@ Tracks multiple implementations across all service types.
 
 ### HopscotchInjector
 
-Injectable field resolution with locator support.
+Inject field resolution with locator support.
 
 **Example:** See Quick Start section below for complete usage example.
 
@@ -92,16 +92,16 @@ locator = locator.register(Greeting, CustomerGreeting, resource=CustomerContext)
 registry.register_value(ServiceLocator, locator)
 ```
 
-### 5. Use Injectable Fields
+### 5. Use Inject Fields
 
 ```python
 from dataclasses import dataclass
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.locator import HopscotchInjector
 
 @dataclass
 class WelcomeService:
-    greeting: Injectable[Greeting]
+    greeting: Inject[Greeting]
 
     def welcome(self, name: str) -> str:
         return self.greeting.greet(name)
@@ -498,7 +498,7 @@ context = container.get(RequestContext)
 print(f"Context type: {type(context)}")
 ```
 
-### Type errors with Injectable[T]
+### Type errors with Inject[T]
 
 **Problem:** Type checker complaints
 

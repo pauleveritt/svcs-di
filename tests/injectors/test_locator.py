@@ -6,7 +6,7 @@ from pathlib import PurePath
 import pytest
 import svcs
 
-from svcs_di.auto import Injectable
+from svcs_di.auto import Inject
 from svcs_di.injectors.locator import (
     FactoryRegistration,
     HopscotchAsyncInjector,
@@ -312,7 +312,7 @@ def registry():
 
 
 # ============================================================================
-# HopscotchInjector Tests - Injectable[T] with locator support
+# HopscotchInjector Tests - Inject[T] with locator support
 # ============================================================================
 
 
@@ -339,7 +339,7 @@ def test_hopscotch_injector_with_injectable_no_locator(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Register a single greeting implementation using register_value
     registry.register_value(Greeting, DefaultGreeting())
@@ -356,7 +356,7 @@ def test_hopscotch_injector_with_locator_no_context(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Setup locator with default greeting
     locator = ServiceLocator()
@@ -376,7 +376,7 @@ def test_hopscotch_injector_with_locator_and_context(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Setup locator with multiple implementations
     locator = ServiceLocator()
@@ -405,7 +405,7 @@ def test_hopscotch_injector_kwargs_override(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
@@ -426,7 +426,7 @@ def test_hopscotch_injector_with_default_fallback(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting] = field(default_factory=DefaultGreeting)  # type: ignore[assignment]
+        greeting: Inject[Greeting] = field(default_factory=DefaultGreeting)  # type: ignore[assignment]
         name: str = "World"
 
     container = svcs.Container(registry)
@@ -438,12 +438,12 @@ def test_hopscotch_injector_with_default_fallback(registry):
 
 
 def test_hopscotch_injector_multiple_injectable_fields(registry):
-    """Test HopscotchInjector with multiple Injectable fields."""
+    """Test HopscotchInjector with multiple Inject fields."""
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
-        database: Injectable[Database]
+        greeting: Inject[Greeting]
+        database: Inject[Database]
 
     locator = ServiceLocator()
     locator = locator.register(
@@ -466,7 +466,7 @@ def test_hopscotch_injector_lifo_override(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     @dataclass
     class SystemGreeting:
@@ -494,7 +494,7 @@ def test_hopscotch_injector_no_resource_configured(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
@@ -517,7 +517,7 @@ async def test_hopscotch_async_injector_with_locator_and_context(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
@@ -541,7 +541,7 @@ async def test_hopscotch_async_injector_kwargs_override(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
@@ -870,11 +870,11 @@ def test_location_registered_as_value_service_in_container(registry):
 
 
 def test_injectable_location_dependency_resolution(registry):
-    """Test Injectable[Location] dependency resolution."""
+    """Test Inject[Location] dependency resolution."""
 
     @dataclass
     class Service:
-        location: Injectable[Location]
+        location: Inject[Location]
         name: str = "TestService"
 
     # Register Location in container
@@ -895,7 +895,7 @@ def test_hopscotch_injector_uses_location_during_resolution(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Setup locator with location-based registrations
     locator = ServiceLocator()
@@ -921,7 +921,7 @@ def test_three_tier_precedence_with_location(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Setup locator with location-based registrations
     locator = ServiceLocator()
@@ -947,7 +947,7 @@ def test_services_restricted_to_location_only_mode(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Setup locator with ONLY admin greeting (no default)
     locator = ServiceLocator()
@@ -982,7 +982,7 @@ def test_location_with_hierarchical_fallback_in_injector(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Setup locator with parent location registration
     locator = ServiceLocator()
@@ -1007,7 +1007,7 @@ async def test_async_injector_uses_location_during_resolution(registry):
 
     @dataclass
     class Service:
-        greeting: Injectable[Greeting]
+        greeting: Inject[Greeting]
 
     # Setup locator with location-based registrations
     locator = ServiceLocator()
@@ -1037,8 +1037,8 @@ def test_end_to_end_container_creation_to_resolution(registry):
 
     @dataclass
     class OrderProcessor:
-        greeting: Injectable[Greeting]
-        database: Injectable[Database]
+        greeting: Inject[Greeting]
+        database: Inject[Database]
 
     # Setup: Create locator with location and resource-based registrations
     locator = ServiceLocator()

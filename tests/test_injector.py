@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable
 import pytest
 import svcs
 
-from svcs_di import DefaultInjector, Injectable
+from svcs_di import DefaultInjector, Inject
 from svcs_di.auto import auto
 
 
@@ -36,12 +36,12 @@ class Database:
 class DBService:
     """A service with injectable dependencies."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
 
 
 def test_injector_container_resolution():
-    """Injectable parameters are resolved from container."""
+    """Inject parameters are resolved from container."""
     registry = svcs.Registry()
     container = svcs.Container(registry)
 
@@ -83,7 +83,7 @@ def test_injector_protocol_uses_get_abstract():
 
     @dataclass
     class ServiceWithProtocol:
-        greeter: Injectable[GreeterProtocol]
+        greeter: Inject[GreeterProtocol]
 
     registry = svcs.Registry()
     container = svcs.Container(registry)
@@ -131,8 +131,8 @@ async def test_async_injector_with_mixed_dependencies():
 
     @dataclass
     class MixedService:
-        sync_dep: Injectable[SyncDep]
-        async_dep: Injectable[AsyncDep]
+        sync_dep: Inject[SyncDep]
+        async_dep: Inject[AsyncDep]
 
     registry = svcs.Registry()
 
@@ -194,7 +194,7 @@ def test_protocol_based_injection_with_runtime_check():
 
     @dataclass
     class ServiceWithProtocol:
-        greeter: Injectable[GreeterProtocol]
+        greeter: Inject[GreeterProtocol]
 
     registry = svcs.Registry()
     greeter = ConcreteGreeter()
@@ -219,7 +219,7 @@ def test_protocol_validation_fails_for_incompatible_type():
 
     @dataclass
     class ServiceWithProtocol:
-        greeter: Injectable[GreeterProtocol]
+        greeter: Inject[GreeterProtocol]
 
     registry = svcs.Registry()
 

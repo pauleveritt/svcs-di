@@ -6,7 +6,7 @@ from typing import Protocol
 import pytest
 import svcs
 
-from svcs_di import Injectable
+from svcs_di import Inject
 
 
 # Test fixtures
@@ -35,7 +35,7 @@ class Database:
 class DBService:
     """A service with injectable dependencies."""
 
-    db: Injectable[Database]
+    db: Inject[Database]
     timeout: int = 30
 
 
@@ -99,7 +99,7 @@ def test_keyword_injector_validates_kwargs():
 
 
 def test_keyword_injector_container_resolution():
-    """Injectable parameters are resolved from container when no kwargs provided."""
+    """Inject parameters are resolved from container when no kwargs provided."""
     from svcs_di.injectors import KeywordInjector
 
     registry = svcs.Registry()
@@ -127,7 +127,7 @@ def test_keyword_injector_protocol_injection():
 
     @dataclass
     class ServiceWithProtocol:
-        greeter: Injectable[GreeterProtocol]
+        greeter: Inject[GreeterProtocol]
 
     registry = svcs.Registry()
     container = svcs.Container(registry)
@@ -181,8 +181,8 @@ async def test_keyword_async_injector_with_mixed_dependencies():
 
     @dataclass
     class MixedService:
-        sync_dep: Injectable[SyncDep]
-        async_dep: Injectable[AsyncDep]
+        sync_dep: Inject[SyncDep]
+        async_dep: Inject[AsyncDep]
 
     registry = svcs.Registry()
 
@@ -215,7 +215,7 @@ async def test_keyword_async_injector_kwargs_override():
 
     @dataclass
     class SimpleService:
-        value: Injectable[Database]
+        value: Inject[Database]
         timeout: int = 10
 
     registry = svcs.Registry()

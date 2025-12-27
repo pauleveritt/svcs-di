@@ -69,6 +69,9 @@ class KeywordInjector:
                     raise TypeError(
                         f"Injectable field '{field_name}' has no inner type"
                     )
+                case inner_type if inner_type is svcs.Container:
+                    # Container injection - inject self.container
+                    return True, self.container
                 case inner_type if field_info.is_protocol:
                     return True, self.container.get_abstract(inner_type)
                 case inner_type:
@@ -162,6 +165,9 @@ class KeywordAsyncInjector:
                     raise TypeError(
                         f"Injectable field '{field_name}' has no inner type"
                     )
+                case inner_type if inner_type is svcs.Container:
+                    # Container injection - inject self.container
+                    return True, self.container
                 case inner_type if field_info.is_protocol:
                     return True, await self.container.aget_abstract(inner_type)
                 case inner_type:

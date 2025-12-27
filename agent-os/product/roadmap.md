@@ -57,15 +57,18 @@
     a `Features` section with subsections that do the same for each directory in `specs`: a heading, a short summary of
     that feature, and a "Read More" link. `M`
 
-13. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
+13. [x] Inject Container — Get the KeywordInjector and HopscotchInjector to recognize `Injectable[Container]` if present and
+    add the `svcs.Container` instance to the arguments. `S`
+
+14. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
     context/location matching, add benchmarks comparing with plain `svcs` and other DI approaches, document performance
     characteristics and trade-offs. `M`
 
-12. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
+15. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
     features like operators, configuration injection, and enhanced metadata, re-imagined to avoid import-time instance
     construction (perhaps using generics). Keep as optional module. Look in ` `L`
 
-13. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
+16. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
     for plugging in custom predicates. `M`
 
 > Notes

@@ -2,6 +2,24 @@
 
 This section provides access to the product documentation and feature specifications that guide the development of svcs-di. Here you can explore the project's mission, roadmap, technology choices, and the detailed specifications for each implemented feature.
 
+```{toctree}
+:maxdepth: 2
+:hidden:
+
+product/mission
+product/roadmap
+product/tech-stack
+features/basic-examples-and-documentation
+features/core-type-safe-dependency-injection
+features/context-specific-service-resolution
+features/keyword-injector
+features/multiple-service-registrations
+features/free-threaded
+features/location-based-service-resolution-and-precedence
+features/optional-scanning-module
+features/github-workflows
+```
+
 ## Product
 
 Core product documentation describing the vision, goals, and technical foundation of svcs-di.

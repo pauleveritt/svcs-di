@@ -578,6 +578,10 @@ class HopscotchInjector:
             if inner_type is None:
                 raise TypeError(f"Injectable field '{field_name}' has no inner type")
 
+            # Check for Container injection first (bypasses locator)
+            if inner_type is svcs.Container:
+                return (True, self.container)
+
             # Try locator first for types with multiple implementations
             try:
                 locator = self.container.get(ServiceLocator)
@@ -710,6 +714,10 @@ class HopscotchAsyncInjector:
             inner_type = field_info.inner_type
             if inner_type is None:
                 raise TypeError(f"Injectable field '{field_name}' has no inner type")
+
+            # Check for Container injection first (bypasses locator)
+            if inner_type is svcs.Container:
+                return (True, self.container)
 
             # Try locator first for types with multiple implementations
             try:

@@ -369,6 +369,10 @@ def _resolve_field_value(
         if inner_type is None:
             raise TypeError(f"Injectable field '{field_info.name}' has no inner type")
 
+        # Check for Container injection first
+        if inner_type is svcs.Container:
+            return True, container
+
         if field_info.is_protocol:
             value = container.get_abstract(inner_type)
         else:
@@ -402,6 +406,10 @@ async def _resolve_field_value_async(
         inner_type = field_info.inner_type
         if inner_type is None:
             raise TypeError(f"Injectable field '{field_info.name}' has no inner type")
+
+        # Check for Container injection first
+        if inner_type is svcs.Container:
+            return True, container
 
         if field_info.is_protocol:
             value = await container.aget_abstract(inner_type)

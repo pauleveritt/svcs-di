@@ -43,6 +43,7 @@ addopts = "-p no:doctest -p no:freethreaded -m \"not slow\""
 pythonpath = ["examples"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "freethreaded: marks tests that verify free-threading compatibility",
 ]
 # Free-threading safety: timeout tests to detect hangs/deadlocks
 timeout = 60

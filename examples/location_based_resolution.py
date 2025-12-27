@@ -17,6 +17,7 @@ Run:
 
 from dataclasses import dataclass
 from pathlib import PurePath
+from typing import Protocol
 
 import svcs
 
@@ -33,7 +34,7 @@ from svcs_di.injectors.locator import (
 # ============================================================================
 
 
-class Greeting:
+class Greeting(Protocol):
     """Protocol for greeting services."""
 
     def greet(self, name: str) -> str: ...

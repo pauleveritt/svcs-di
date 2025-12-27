@@ -141,10 +141,8 @@ def main():
     container_check = svcs.Container(registry)
     try:
         locator = container_check.get(ServiceLocator)
-        print(f"\n  ServiceLocator has {len(locator.registrations)} resource-specific registrations:")
-        for reg in locator.registrations:
-            resource_name = reg.resource.__name__ if reg.resource else "None"
-            print(f"    - {reg.implementation.__name__} (resource={resource_name})")
+        # Note: ServiceLocator registrations are stored internally in _single_registrations and _multi_registrations
+        print("\n  ServiceLocator contains resource-specific registrations (CustomerGreeting and EmployeeGreeting)")
     except Exception:
         print("  No ServiceLocator found (all registrations are non-resource)")
 

@@ -284,7 +284,7 @@ def test_for_with_hopscotch_injector():
         greeting: Injectable[Greeting]
 
         def welcome(self, name: str) -> str:
-            return self.greeting.greet(name)
+            return self.greeting.greet(name)  # type: ignore[attr-defined]
 
     registry = svcs.Registry()
     scan(registry, locals_dict=locals())
@@ -328,7 +328,7 @@ def test_for_with_hopscotch_injector_fallback():
         greeting: Injectable[Greeting]
 
         def welcome(self, name: str) -> str:
-            return self.greeting.greet(name)
+            return self.greeting.greet(name)  # type: ignore[attr-defined]
 
     registry = svcs.Registry()
     scan(registry, locals_dict=locals())
@@ -456,7 +456,7 @@ def test_for_with_nested_dependencies():
         repo: Injectable[Repository]
 
         def fetch(self) -> str:
-            return self.repo.query()
+            return self.repo.query()  # type: ignore[attr-defined]
 
     registry = svcs.Registry()
     scan(registry, locals_dict=locals())
@@ -504,8 +504,8 @@ def test_for_with_multiple_injectable_fields():
         formatter: Injectable[Formatter]
 
         def create_message(self, name: str) -> str:
-            greeting = f"{self.greeter.salutation}, {name}!"
-            return self.formatter.format(greeting)
+            greeting = f"{self.greeter.salutation}, {name}!"  # type: ignore[attr-defined]
+            return self.formatter.format(greeting)  # type: ignore[attr-defined]
 
     registry = svcs.Registry()
     scan(registry, locals_dict=locals())

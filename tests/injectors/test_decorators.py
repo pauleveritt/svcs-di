@@ -189,7 +189,7 @@ def test_injectable_for_defaults_to_none():
     class SomeService:
         pass
 
-    metadata = SomeService.__injectable_metadata__
+    metadata = SomeService.__injectable_metadata__  # type: ignore[attr-defined]
     assert metadata["for_"] is None
 
 
@@ -212,11 +212,11 @@ def test_injectable_multiple_implementations_same_for():
         pass
 
     # All three should have metadata pointing to Greeting
-    assert DefaultGreeting.__injectable_metadata__["for_"] is Greeting
-    assert DefaultGreeting.__injectable_metadata__["resource"] is None
+    assert DefaultGreeting.__injectable_metadata__["for_"] is Greeting  # type: ignore[attr-defined]
+    assert DefaultGreeting.__injectable_metadata__["resource"] is None  # type: ignore[attr-defined]
 
-    assert CustomerGreeting.__injectable_metadata__["for_"] is Greeting
-    assert CustomerGreeting.__injectable_metadata__["resource"] is CustomerContext
+    assert CustomerGreeting.__injectable_metadata__["for_"] is Greeting  # type: ignore[attr-defined]
+    assert CustomerGreeting.__injectable_metadata__["resource"] is CustomerContext  # type: ignore[attr-defined]
 
-    assert EmployeeGreeting.__injectable_metadata__["for_"] is Greeting
-    assert EmployeeGreeting.__injectable_metadata__["resource"] is EmployeeContext
+    assert EmployeeGreeting.__injectable_metadata__["for_"] is Greeting  # type: ignore[attr-defined]
+    assert EmployeeGreeting.__injectable_metadata__["resource"] is EmployeeContext  # type: ignore[attr-defined]

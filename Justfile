@@ -69,7 +69,7 @@ clean:
     find . -type f -name "*.pyc" -delete
 
 # Run the full CI suite (quality + tests with coverage)
-ci: quality test-cov
+ci-checks: quality test-cov
 
 # Run doctests specifically (via Sybil)
 # Note: auto.py is excluded (narrative examples, not executable tests)
@@ -82,6 +82,13 @@ coverage-report:
     uv run coverage report
     uv run coverage html
     @echo "HTML coverage report generated in htmlcov/index.html"
+
+# Run free-threaded Python tests
+test-freethreaded:
+    uv run pytest -p freethreaded -p no:doctest --threads=8 --iterations=10 --require-gil-disabled tests/test_free_threading.py
+
+# Run all CI checks including free-threading tests
+ci-checks-ft: quality test-cov test-freethreaded
 
 # Enable pre-push hook to run ci-checks before pushing - installs git hook
 # Automatically runs full quality checks before every git push

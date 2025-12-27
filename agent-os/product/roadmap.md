@@ -41,7 +41,7 @@
    when multiple registrations could satisfy a request, with scoring that considers both context and location matches,
    and system vs site registration priority.`L`
 
-10. [ ] Free-Threaded Python Compatibility — Verify and document free-threaded Python (PEP 703) compatibility, add
+10. [x] Free-Threaded Python Compatibility — Verify and document free-threaded Python (PEP 703) compatibility, add
     specific tests using pytest-freethreaded, ensure thread-safe container operations, and document any threading
     considerations or limitations. `M`
 

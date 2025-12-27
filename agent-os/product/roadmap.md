@@ -50,7 +50,7 @@
     composite action for reuse. The GitHub workflows should use the Just recipes. Workflow dependency caching with `uv`.
     `S`
 
-12. [] Specifications Into Sphinx — Analyze this project's `agent-os/product/` and `agent-os/specs/` to link into a
+12. [x] Specifications Into Sphinx — Analyze this project's `agent-os/product/` and `agent-os/specs/` to link into a
     `docs/specifications/index.md` in Sphinx. Have an ordered `toctree` that brings them in. The `index.md` should have
     a descriptive listing, with a `Prooduct` heading having some text, then sections for `mission.md`, `roadmap.md`, and
     `tech-stack.md`. Each subsection heading has a "Read More" a link to the full document with some summary text. Then

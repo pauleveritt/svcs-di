@@ -12,6 +12,48 @@ The `scan()` function provides venusian-inspired auto-discovery with three key c
 
 ## Examples
 
+```python
+# Setup for all examples in this document
+from dataclasses import dataclass
+from typing import Protocol
+import svcs
+from svcs_di import Injectable
+from svcs_di.injectors.locator import scan, ServiceLocator, HopscotchInjector
+from svcs_di.injectors.decorators import injectable
+
+# Create registry and container for examples
+registry = svcs.Registry()
+container = svcs.Container(registry)
+
+# Common example classes and contexts
+class Database:
+    pass
+
+class Cache:
+    pass
+
+class UserRepository:
+    pass
+
+class CustomerContext:
+    pass
+
+class EmployeeContext:
+    pass
+
+class RequestContext:
+    pass
+
+class MyService:
+    pass
+
+class CustomerService:
+    pass
+
+class Greeting(Protocol):
+    def greet(self, name: str) -> str: ...
+```
+
 ### Basic Scanning (`basic_scanning.py`)
 
 The simplest use case: mark services with `@injectable`, call `scan()`, and retrieve services.
@@ -23,7 +65,7 @@ The simplest use case: mark services with `@injectable`, call `scan()`, and retr
 - Dependency injection: Services with `Injectable[T]` fields are automatically resolved
 
 **What it demonstrates:**
-```python
+```text
 # Step 1: Mark services
 @injectable
 @dataclass
@@ -92,6 +134,74 @@ scan(registry)
 uv run python examples/scanning/context_aware_scanning.py
 ```
 
+### Multiple Implementations with for_ Parameter (`multiple_implementations_with_decorator.py`)
+
+Demonstrates the `for_` parameter for multiple implementations of a common service type (protocol/base class).
+
+**Key Concepts:**
+- `for_` parameter: Specify which service type an implementation provides
+- Protocol-based design: Multiple implementations of same interface
+- ServiceLocator: Automatic resolution based on `for_` and `resource`
+- Consumer independence: Depend on protocol, not concrete implementations
+
+**What it demonstrates:**
+```text
+# Define protocol
+class Greeting(Protocol):
+    def greet(self, name: str) -> str: ...
+
+# Multiple implementations of same protocol
+@injectable(for_=Greeting)  # Default
+@dataclass
+class DefaultGreeting:
+    def greet(self, name: str) -> str:
+        return "Hello!"
+
+@injectable(for_=Greeting, resource=CustomerContext)
+@dataclass
+class CustomerGreeting:
+    def greet(self, name: str) -> str:
+        return "Good morning, valued customer!"
+
+@injectable(for_=Greeting, resource=EmployeeContext)
+@dataclass
+class EmployeeGreeting:
+    def greet(self, name: str) -> str:
+        return "Hey there!"
+
+# Consumer depends on protocol, not implementations
+@injectable
+@dataclass
+class WelcomeService:
+    greeting: Injectable[Greeting]  # Automatically resolved!
+
+    def welcome(self, name: str) -> str:
+        return self.greeting.greet(name)
+
+# Scan registers all implementations to ServiceLocator
+scan(registry)
+
+# HopscotchInjector resolves appropriate implementation
+registry.register_value(RequestContext, CustomerContext())
+injector = HopscotchInjector(container, resource=RequestContext)
+service = injector(WelcomeService)  # Gets CustomerGreeting automatically!
+```
+
+**Key Differences:**
+- **Without `for_`**: Each class is its own service type (EmployeeGreeting, CustomerGreeting)
+- **With `for_`**: All classes implement the same service type (Greeting protocol)
+
+**When to use `for_`:**
+- ✅ Multiple implementations of a protocol/interface
+- ✅ Consumers depend on abstract type, not concrete classes
+- ✅ Swap implementations without changing consumer code
+- ❌ Don't use when each class is genuinely a different service
+
+**Run it:**
+```bash
+uv run python examples/scanning/multiple_implementations_with_decorator.py
+```
+
 ### Nested Package Scanning (`nested_with_string.py`)
 
 Demonstrates string-based scanning of a nested application structure with multiple subdirectories.
@@ -119,7 +229,7 @@ nested_app/
 ```
 
 **What it demonstrates:**
-```python
+```text
 # Single scan call discovers ALL subdirectories recursively!
 scan(registry, "nested_app")
 
@@ -158,7 +268,7 @@ scan(registry)  # Automatically detects calling package
 **When to use:** Development and simple applications where `scan()` is called from your main application package.
 
 ### 2. String Package Name
-```python
+```text
 scan(registry, "myapp.services")
 ```
 
@@ -168,7 +278,7 @@ scan(registry, "myapp.services")
 - Testing where you want to be explicit about what's scanned
 
 ### 3. Module Object
-```python
+```text
 import myapp.services
 scan(registry, myapp.services)
 ```
@@ -192,9 +302,30 @@ def test_my_service():
 2. **Module Import**: Imports each module to trigger decorator execution
 3. **Metadata Collection**: Finds all classes with `__injectable_metadata__` attribute
 4. **Registration**:
-   - Classes with `resource` parameter → `ServiceLocator.register()`
-   - Classes without `resource` → `Registry.register_factory()`
+   - Classes with `for_` or `resource` → `ServiceLocator.register(service_type, implementation, resource)`
+   - Classes without `for_` or `resource` → `Registry.register_factory(implementation)`
 5. **Dependency Resolution**: At request time, `Injectable[T]` fields are resolved from container
+
+### Registration Logic
+
+The `for_` parameter determines the service type:
+
+```python
+# Without for_ - class is its own service type
+@injectable
+class Database:  # Registered as Database → Database
+    ...
+
+# With for_ - class implements specified service type
+@injectable(for_=Greeting)
+class DefaultGreeting:  # Registered as Greeting → DefaultGreeting
+    ...
+
+# With for_ and resource - context-specific implementation
+@injectable(for_=Greeting, resource=CustomerContext)
+class CustomerGreeting:  # Registered as Greeting → CustomerGreeting (CustomerContext)
+    ...
+```
 
 ## Design Principles
 

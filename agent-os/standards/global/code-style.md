@@ -8,3 +8,4 @@
 - Prefer `PurePath` and `Path` over `str` for file paths
 - Try to avoid local imports, put them at module level unless it leads to circular imports
 - Don't do redundant parentheses on tuples, use `1, 2` instead of `(1,2)`
+- Use the walrus operator `:=` for assignment expressions and any other places of value

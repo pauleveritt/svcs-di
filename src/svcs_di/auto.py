@@ -193,8 +193,7 @@ def extract_inner_type(type_hint: Any) -> type | None:
     """Extract the inner type from Injectable[T]."""
     if not is_injectable(type_hint):
         return None
-    args = get_args(type_hint)
-    return args[0] if args else None
+    return args[0] if (args := get_args(type_hint)) else None
 
 
 def is_protocol_type(cls: type | Any) -> bool:
@@ -273,15 +272,13 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
             field.default is not dataclasses.MISSING
             or field.default_factory is not dataclasses.MISSING
         )
-        default_value = (
-            field.default
-            if field.default is not dataclasses.MISSING
-            else (
-                field.default_factory
-                if field.default_factory is not dataclasses.MISSING
-                else None
-            )
-        )
+        match (field.default, field.default_factory):
+            case (d, _) if d is not dataclasses.MISSING:
+                default_value = d
+            case (_, f) if f is not dataclasses.MISSING:
+                default_value = f
+            case _:
+                default_value = None
 
         field_infos.append(
             _create_field_info(field.name, type_hint, has_default, default_value)

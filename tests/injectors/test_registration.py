@@ -67,9 +67,13 @@ def test_resource_based_registrations_use_service_locator():
         container = svcs.Container(registry)
         locator = container.get(ServiceLocator)
 
-        # Verify registrations exist in locator
+        # Verify registrations exist in locator (check both single and multi paths)
         assert locator is not None
-        assert len(locator.registrations) > 0
+        total_registrations = (
+            len(locator._single_registrations) +
+            sum(len(regs) for regs in locator._multi_registrations.values())
+        )
+        assert total_registrations > 0
 
         # Verify we can get implementations for each resource
         customer_impl = locator.get_implementation(CustomerGreeting, CustomerContext)
@@ -155,17 +159,21 @@ def test_lifo_ordering_maintained():
         container = svcs.Container(registry)
         locator = container.get(ServiceLocator)
 
-        # The registrations should be in reverse order of scanning (LIFO)
-        # Most recent registration should be first
-        registrations_list = list(locator.registrations)
-        assert len(registrations_list) >= 3
+        # Collect all registrations from both single and multi paths
+        all_registrations = []
+        for reg in locator._single_registrations.values():
+            all_registrations.append(reg)
+        for regs_tuple in locator._multi_registrations.values():
+            all_registrations.extend(regs_tuple)
+
+        assert len(all_registrations) >= 3
 
         # Verify LIFO: last scanned item should be first in registrations
         # Note: dir() returns attributes in alphabetical order, so order is:
         # AdminImpl, CustomerImpl, EmployeeImpl
         # In LIFO, they should be reversed: EmployeeImpl, CustomerImpl, AdminImpl
         # But since we can't guarantee dir() order, just verify all are present
-        impl_types = {reg.implementation for reg in registrations_list}
+        impl_types = {reg.implementation for reg in all_registrations}
         assert CustomerImpl in impl_types
         assert EmployeeImpl in impl_types
         assert AdminImpl in impl_types

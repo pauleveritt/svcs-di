@@ -28,10 +28,11 @@ from svcs_di.injectors.locator import (
 # ============================================================================
 
 
+@dataclass
 class Greeting:
-    """Base protocol for greeting services."""
+    """Default greeting service (also serves as the protocol)."""
 
-    salutation: str
+    salutation: str = "Good Day"
 
     def greet(self, name: str) -> str:
         """Return a greeting message."""
@@ -80,13 +81,6 @@ class AdminContext(EmployeeContext):
 # ============================================================================
 # Greeting Implementations
 # ============================================================================
-
-
-@dataclass
-class DefaultGreeting(Greeting):
-    """Default greeting for all resources (lowest precedence)."""
-
-    salutation: str = "Good Day"
 
 
 @dataclass
@@ -166,7 +160,7 @@ def example_basic_multiple_implementations():
     locator = ServiceLocator()
 
     # Register multiple greeting implementations
-    locator = locator.register(Greeting, DefaultGreeting)  # Default (no resource)
+    locator = locator.register(Greeting, Greeting)  # Default (no resource)
     locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
     locator = locator.register(Greeting, CustomerGreeting, resource=CustomerContext)
 
@@ -229,7 +223,7 @@ def example_lifo_override():
 
     # System-level default
     print("\nStep 1: System registers default greeting")
-    locator = locator.register(Greeting, DefaultGreeting)
+    locator = locator.register(Greeting, Greeting)
 
     # Site-level override (LIFO - inserted at position 0)
     print("Step 2: Site overrides with customer greeting (LIFO)")
@@ -270,7 +264,7 @@ def example_three_tier_precedence():
     locator = ServiceLocator()
 
     # Register with different precedence levels
-    locator = locator.register(Greeting, DefaultGreeting)  # Low: no resource
+    locator = locator.register(Greeting, Greeting)  # Low: no resource
     locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)  # Medium/High
     locator = locator.register(Greeting, AdminGreeting, resource=AdminContext)  # High for AdminContext
 
@@ -293,7 +287,7 @@ def example_three_tier_precedence():
     # Test 2: Subclass match (AdminContext inherits from EmployeeContext)
     print("\nTest 2: AdminContext with no exact match - subclass match (medium precedence)")
     locator2 = ServiceLocator()
-    locator2 = locator2.register(Greeting, DefaultGreeting)
+    locator2 = locator2.register(Greeting, Greeting)
     locator2 = locator2.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
     # No AdminGreeting registered this time
 
@@ -378,7 +372,7 @@ def example_fallback_behavior():
     registry = svcs.Registry()
 
     # Register single implementations via standard svcs
-    registry.register_value(Greeting, DefaultGreeting())
+    registry.register_value(Greeting, Greeting())
     registry.register_value(Database, ProductionDB())
 
     container = svcs.Container(registry)

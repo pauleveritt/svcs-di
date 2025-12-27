@@ -64,16 +64,15 @@ class KeywordInjector:
 
         # Tier 2: Injectable from container
         if field_info.is_injectable:
-            inner_type = field_info.inner_type
-            if inner_type is None:
-                raise TypeError(f"Injectable field '{field_name}' has no inner type")
-            else:
-                if field_info.is_protocol:
-                    value = self.container.get_abstract(inner_type)
-                else:
-                    value = self.container.get(inner_type)
-
-                return True, value
+            match field_info.inner_type:
+                case None:
+                    raise TypeError(
+                        f"Injectable field '{field_name}' has no inner type"
+                    )
+                case inner_type if field_info.is_protocol:
+                    return True, self.container.get_abstract(inner_type)
+                case inner_type:
+                    return True, self.container.get(inner_type)
 
         # Tier 3: default value
         if field_info.has_default:
@@ -158,16 +157,15 @@ class KeywordAsyncInjector:
 
         # Tier 2: Injectable from container (async)
         if field_info.is_injectable:
-            inner_type = field_info.inner_type
-            if inner_type is None:
-                raise TypeError(f"Injectable field '{field_name}' has no inner type")
-            else:
-                if field_info.is_protocol:
-                    value = await self.container.aget_abstract(inner_type)
-                else:
-                    value = await self.container.aget(inner_type)
-
-                return True, value
+            match field_info.inner_type:
+                case None:
+                    raise TypeError(
+                        f"Injectable field '{field_name}' has no inner type"
+                    )
+                case inner_type if field_info.is_protocol:
+                    return True, await self.container.aget_abstract(inner_type)
+                case inner_type:
+                    return True, await self.container.aget(inner_type)
 
         # Tier 3: default value
         if field_info.has_default:

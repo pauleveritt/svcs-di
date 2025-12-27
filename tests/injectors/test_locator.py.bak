@@ -83,8 +83,8 @@ def test_factory_registration_with_resource_parameter():
         service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext
     )
     assert reg.resource == EmployeeContext
-    # Scoring: exact resource match = 100
-    assert reg.matches(EmployeeContext) == 100  # Exact match
+    # New scoring: exact resource (10) + base (1) = 11
+    assert reg.matches(EmployeeContext) == 11  # Exact match
 
 
 def test_service_locator_register_with_resource_parameter():
@@ -139,8 +139,8 @@ def test_factory_registration_matches_no_resource():
     reg = FactoryRegistration(
         service_type=Greeting, implementation=DefaultGreeting, resource=None
     )
-    # Scoring: default resource = 0
-    assert reg.matches(None) == 0  # Default match
+    # New scoring: resource (0) + base (1) = 1
+    assert reg.matches(None) == 1  # Default match
 
 
 def test_factory_registration_matches_exact():
@@ -148,8 +148,8 @@ def test_factory_registration_matches_exact():
     reg = FactoryRegistration(
         service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext
     )
-    # Scoring: exact resource = 100
-    assert reg.matches(EmployeeContext) == 100  # Exact match
+    # New scoring: exact resource (10) + base (1) = 11
+    assert reg.matches(EmployeeContext) == 11  # Exact match
 
 
 def test_factory_registration_matches_subclass():
@@ -157,8 +157,8 @@ def test_factory_registration_matches_subclass():
     reg = FactoryRegistration(
         service_type=Greeting, implementation=EmployeeGreeting, resource=EmployeeContext
     )
-    # Scoring: subclass resource = 10
-    assert reg.matches(AdminContext) == 10  # Subclass match
+    # New scoring: subclass resource (2) + base (1) = 3
+    assert reg.matches(AdminContext) == 3  # Subclass match
 
 
 def test_factory_registration_no_match():
@@ -1253,10 +1253,6 @@ def test_decorator_integration_with_location_scanning(registry):
     assert public_impl == PublicService
 
     # GlobalService should be registered directly to registry (no location/resource)
-    # It gets registered via factory pattern, so we get it through container
-    global_service = container.get(GlobalService)
-    assert isinstance(global_service, GlobalService)
-    assert global_service.name == "Global"
     # It gets registered via factory pattern, so we get it through container
     global_service = container.get(GlobalService)
     assert isinstance(global_service, GlobalService)

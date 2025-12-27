@@ -33,37 +33,28 @@
    complex features. Keep this as an optional module separate from core. We have a local venusian checkout in
    `/Users/pauleveritt/PycharmProjects/venusian`. `L`
 
-8. [ ] Location-Based Service Resolution — Add location/path-based service resolution where services registered with a
+8. [x] Location-Based Service Resolution — Add location/path-based service resolution where services registered with a
    location (PurePath) are selected when the request location is relative to the registered location, enabling URL-based
    or hierarchical service selection. Allow this to be combined with `request` selection but at a lower precedence.  `M`
 
-9. [ ] Precedence and Scoring System — Implement intelligent precedence rules for selecting the best matching service
+9. [x] Precedence and Scoring System — Implement intelligent precedence rules for selecting the best matching service
    when multiple registrations could satisfy a request, with scoring that considers both context and location matches,
    and system vs site registration priority.`L`
- 
-10. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
-    for plugging in custom predicates. `M`
 
-11. [ ] Advanced Examples for Context Resolution — Build comprehensive examples demonstrating context-aware patterns (
-    multi-tenant, customer vs employee, location-based routing) with full test coverage and documentation explaining the
-    resolution strategy and precedence rules. `M`
-
-
-12. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
-    features like operators, configuration injection, and enhanced metadata, re-imagined to avoid import-time instance
-    construction (perhaps using generics). Keep as optional module. `L`
-
-13. [ ] Free-Threaded Python Compatibility — Verify and document free-threaded Python (PEP 703) compatibility, add
+10. [ ] Free-Threaded Python Compatibility — Verify and document free-threaded Python (PEP 703) compatibility, add
     specific tests using pytest-freethreaded, ensure thread-safe container operations, and document any threading
     considerations or limitations. `M`
 
-14. [ ] Integration Documentation and Migration Guide — Create comprehensive guides for integrating svcs-di into
-    existing `svcs` applications, migration path from Hopscotch to svcs-di, comparison with other DI frameworks, and
-    best practices for structuring large applications. `S`
-
-15. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
+11. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
     context/location matching, add benchmarks comparing with plain `svcs` and other DI approaches, document performance
     characteristics and trade-offs. `M`
+
+12. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
+    features like operators, configuration injection, and enhanced metadata, re-imagined to avoid import-time instance
+    construction (perhaps using generics). Keep as optional module. Look in ` `L`
+
+13. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
+    for plugging in custom predicates. `M`
 
 > Notes
 > - Items 1-4 form the minimal viable core of svcs-di focused on type-safe DI

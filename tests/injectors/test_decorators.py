@@ -33,6 +33,7 @@ def test_injectable_bare_decorator():
     # Check metadata is stored
     assert hasattr(SimpleService, "__injectable_metadata__")
     metadata = SimpleService.__injectable_metadata__
+    assert metadata["for_"] is None
     assert metadata["resource"] is None
 
     # Verify class is unchanged (transparent decorator)
@@ -50,6 +51,7 @@ def test_injectable_with_resource_parameter():
     # Check metadata stores resource
     assert hasattr(CustomerService, "__injectable_metadata__")
     metadata = CustomerService.__injectable_metadata__
+    assert metadata["for_"] is None
     assert metadata["resource"] is CustomerContext
 
 
@@ -63,6 +65,7 @@ def test_injectable_without_resource():
     # Check metadata shows no resource
     assert hasattr(DefaultService, "__injectable_metadata__")
     metadata = DefaultService.__injectable_metadata__
+    assert metadata["for_"] is None
     assert metadata["resource"] is None
 
 
@@ -80,6 +83,7 @@ def test_injectable_metadata_storage_no_registration():
     # We verify this by ensuring the decorator didn't interact with any registry
     # The class should just have metadata attached, nothing more
     metadata = EmployeeService.__injectable_metadata__
+    assert metadata["for_"] is None
     assert metadata["resource"] == EmployeeContext
 
 
@@ -103,9 +107,12 @@ def test_injectable_multiple_decorators_same_type():
     assert hasattr(ServiceImplB, "__injectable_metadata__")
     assert hasattr(ServiceImplC, "__injectable_metadata__")
 
-    # Each with correct resource
+    # Each with correct resource and for_
+    assert ServiceImplA.__injectable_metadata__["for_"] is None
     assert ServiceImplA.__injectable_metadata__["resource"] is None
+    assert ServiceImplB.__injectable_metadata__["for_"] is None
     assert ServiceImplB.__injectable_metadata__["resource"] is CustomerContext
+    assert ServiceImplC.__injectable_metadata__["for_"] is None
     assert ServiceImplC.__injectable_metadata__["resource"] is EmployeeContext
 
 
@@ -132,4 +139,84 @@ def test_injectable_preserves_class_functionality():
 
     # Metadata is there
     assert hasattr(ComplexService, "__injectable_metadata__")
+    assert ComplexService.__injectable_metadata__["for_"] is None
     assert ComplexService.__injectable_metadata__["resource"] == TestContext
+
+
+# ============================================================================
+# @injectable Decorator Tests - for_ Parameter
+# ============================================================================
+
+
+def test_injectable_with_for_parameter():
+    """Test @injectable(for_=BaseType) decorator."""
+
+    class BaseService:
+        pass
+
+    @injectable(for_=BaseService)
+    class ConcreteService:
+        pass
+
+    # Check metadata stores for_
+    assert hasattr(ConcreteService, "__injectable_metadata__")
+    metadata = ConcreteService.__injectable_metadata__
+    assert metadata["for_"] is BaseService
+    assert metadata["resource"] is None
+
+
+def test_injectable_with_for_and_resource():
+    """Test @injectable(for_=BaseType, resource=Context) decorator."""
+
+    class BaseService:
+        pass
+
+    @injectable(for_=BaseService, resource=CustomerContext)
+    class CustomerServiceImpl:
+        pass
+
+    # Check metadata stores both
+    assert hasattr(CustomerServiceImpl, "__injectable_metadata__")
+    metadata = CustomerServiceImpl.__injectable_metadata__
+    assert metadata["for_"] is BaseService
+    assert metadata["resource"] is CustomerContext
+
+
+def test_injectable_for_defaults_to_none():
+    """Test that for_ defaults to None when not specified."""
+
+    @injectable
+    class SomeService:
+        pass
+
+    metadata = SomeService.__injectable_metadata__
+    assert metadata["for_"] is None
+
+
+def test_injectable_multiple_implementations_same_for():
+    """Test multiple @injectable decorators implementing same service type."""
+
+    class Greeting:
+        pass
+
+    @injectable(for_=Greeting)
+    class DefaultGreeting:
+        pass
+
+    @injectable(for_=Greeting, resource=CustomerContext)
+    class CustomerGreeting:
+        pass
+
+    @injectable(for_=Greeting, resource=EmployeeContext)
+    class EmployeeGreeting:
+        pass
+
+    # All three should have metadata pointing to Greeting
+    assert DefaultGreeting.__injectable_metadata__["for_"] is Greeting
+    assert DefaultGreeting.__injectable_metadata__["resource"] is None
+
+    assert CustomerGreeting.__injectable_metadata__["for_"] is Greeting
+    assert CustomerGreeting.__injectable_metadata__["resource"] is CustomerContext
+
+    assert EmployeeGreeting.__injectable_metadata__["for_"] is Greeting
+    assert EmployeeGreeting.__injectable_metadata__["resource"] is EmployeeContext

@@ -5,8 +5,9 @@ This example demonstrates advanced scanning with resource-based resolution:
 - Show how the same service type can have different implementations based on context
 - Demonstrate resource-based resolution with HopscotchInjector
 
-Note: This example shows a practical pattern where a specific service (not a base class)
-is registered multiple times with different resource contexts.
+Note: This example shows a practical pattern where each class is its own service type.
+For multiple implementations of a common protocol/base class, see:
+  - multiple_implementations_with_decorator.py (using for_ parameter)
 """
 
 from dataclasses import dataclass
@@ -279,6 +280,29 @@ def main():
     print("  5. Non-resource implementations go directly to Registry")
     print("  6. ServiceLocator.get_implementation() resolves based on context")
     print("  7. Three-tier precedence: exact > subclass > default")
+    print("=" * 70)
+
+    print("\n" + "=" * 70)
+    print("Alternative Pattern: Using for_ Parameter")
+    print("=" * 70)
+    print("\nThis example shows each class as its own service type:")
+    print("  GreetingService, EmployeeGreetingService, CustomerGreetingService")
+    print("\nFor multiple implementations of a COMMON service type:")
+    print("  Use @injectable(for_=BaseType, resource=Context)")
+    print("\nExample with for_ parameter:")
+    print("  class Greeting(Protocol):  # Common protocol")
+    print("      def greet(self, name: str) -> str: ...")
+    print()
+    print("  @injectable(for_=Greeting)  # Default")
+    print("  class DefaultGreeting: ...")
+    print()
+    print("  @injectable(for_=Greeting, resource=CustomerContext)")
+    print("  class CustomerGreeting: ...")
+    print()
+    print("Then consumers depend on Greeting, not specific implementations:")
+    print("  greeting: Injectable[Greeting]  # Resolved automatically!")
+    print()
+    print("See: examples/scanning/multiple_implementations_with_decorator.py")
     print("=" * 70 + "\n")
 
 

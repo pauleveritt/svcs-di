@@ -1,37 +1,114 @@
 """
-Service Locator - Multiple implementation registrations with resource-based selection.
+Service Locator - Multiple implementation registrations with resource and location-based selection.
 
-This module provides two key capabilities:
+This module provides three key capabilities:
 
 1. **ServiceLocator**: A thread-safe, immutable locator for managing multiple service
-   implementations with resource-based selection. This allows different implementations
-   to be selected based on business entity types like Customer, Employee, or Product.
+   implementations with resource and location-based selection. This allows different implementations
+   to be selected based on business entity types (Customer, Employee, Product) and hierarchical
+   locations (URL paths like /admin, /public).
 
-2. **Package Scanning**: Decorator-based auto-discovery of services via the @injectable
+2. **Location Type**: A type alias for `PurePath` representing hierarchical request context
+   (URL paths, filesystem-like paths). Location is treated as a special service type that
+   containers have access to via value service registration.
+
+3. **Package Scanning**: Decorator-based auto-discovery of services via the @injectable
    decorator and scan() function. This eliminates manual registration code by automatically
    discovering and registering decorated classes.
 
-The ServiceLocator uses svcs.Registry as the underlying storage and provides a locator
-service that tracks multiple implementations with three-tier precedence:
-- Exact resource match (highest)
-- Subclass resource match (medium)
-- Default/no resource (lowest)
+The ServiceLocator provides precedence scoring that combines:
+- Location matches (exact location: 100 points)
+- Resource matches (exact: 10 points, subclass: 2 points)
+- Base registration (1 point)
+
+Services registered with locations are ONLY available at that location or its children (hierarchical fallback).
+More specific locations (deeper in hierarchy) always take precedence over less specific locations.
+
+Location as Special Service:
+- `Location` (aliased from `PurePath`) represents hierarchical request context
+- Containers can have Location registered as a value service: `registry.register_value(Location, PurePath("/admin"))`
+- Services can depend on Location via `Injectable[Location]` to access current request location
+- The Location service represents "where" the current request is happening in the application hierarchy
+- PurePath is immutable and thread-safe, compatible with free-threaded Python
+- Supports hierarchy operations: `.parents` for traversal, `.is_relative_to()` for relationships
+
+Precedence Scoring:
+- Location: 1000 (exact/hierarchical match) or 0 (global) or -1 (no match)
+- Resource: 100 (exact) or 10 (subclass) or 0 (default) or -1 (no match)
+- Combined score = location_score + resource_score
+- Possible scores: 1100 (location+exact), 1010 (location+subclass), 1000 (location+default),
+                   100 (exact), 10 (subclass), 0 (default), -1 (no match)
+- LIFO ordering breaks ties (most recent registration wins)
+
+Performance Optimization:
+- ServiceLocator automatically uses a fast O(1) lookup path for service types with a single registration
+- When a second implementation is registered for the same service type, it switches to an O(m) scoring
+  path where m is the number of registrations for that specific service (not all services)
+- This makes the single-implementation case nearly as fast as using svcs.Registry directly
+- Multiple service types can coexist: some using the fast path, others using the scoring path
+- The optimization is transparent - no API changes required
 
 The scanning functionality provides a venusian-inspired decorator pattern that:
 - Marks services with @injectable decorator at class definition time
 - Discovers and registers them at application startup via scan()
 - Supports resource-based registrations with @injectable(resource=...)
+- Supports location-based registrations with @injectable(location=PurePath(...))
+- Supports combined resource+location: @injectable(resource=X, location=PurePath(...))
 - Works seamlessly with Injectable[T] dependency injection
 
 Also includes HopscotchInjector which extends KeywordInjector to support automatic
 locator-based resolution for Injectable[T] fields with multiple implementations.
 
 Examples:
+    >>> # Setup for doctests
+    >>> from pathlib import PurePath
+    >>> from dataclasses import dataclass
+    >>> import svcs
+    >>> from svcs_di.injectors.locator import ServiceLocator, Location, scan
+    >>> from svcs_di.injectors.decorators import injectable
+    >>>
+    >>> # Define example classes
+    >>> class Greeting: pass
+    >>> class DefaultGreeting(Greeting): pass
+    >>> class EmployeeGreeting(Greeting): pass
+    >>> class AdminGreeting(Greeting): pass
+    >>> class PublicGreeting(Greeting): pass
+    >>> class EnhancedGreeting(Greeting): pass
+    >>> class EmployeeContext: pass
+    >>> class CustomerContext: pass
+    >>> class AuthenticatedContext: pass
+
     Basic usage with ServiceLocator:
         >>> locator = ServiceLocator()
         >>> locator = locator.register(Greeting, DefaultGreeting)
         >>> locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
+        >>> registry = svcs.Registry()
         >>> registry.register_value(ServiceLocator, locator)
+
+    Location-based registration:
+        >>> locator = ServiceLocator()
+        >>> locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
+        >>> locator = locator.register(Greeting, PublicGreeting, location=PurePath("/public"))
+        >>> registry = svcs.Registry()
+        >>> registry.register_value(ServiceLocator, locator)
+        >>> registry.register_value(Location, PurePath("/admin"))  # Current request location
+
+    Combined resource + location:
+        >>> locator = ServiceLocator()
+        >>> locator = locator.register(
+        ...     Greeting, EnhancedGreeting,
+        ...     resource=AuthenticatedContext,
+        ...     location=PurePath("/admin")
+        ... )
+        >>> registry = svcs.Registry()
+        >>> registry.register_value(ServiceLocator, locator)
+
+    Location as special service:
+        >>> from pathlib import PurePath
+        >>> registry = svcs.Registry()
+        >>> registry.register_value(Location, PurePath("/admin"))
+        >>> container = svcs.Container(registry)
+        >>> current_location = container.get(Location)  # Returns PurePath("/admin")
 
     Basic usage with scanning:
         >>> @injectable
@@ -40,7 +117,7 @@ Examples:
         ...     host: str = "localhost"
         ...
         >>> registry = svcs.Registry()
-        >>> scan(registry, "myapp.services")
+        >>> scan(registry, "myapp.services")  # doctest: +SKIP
 
     Resource-based scanning:
         >>> @injectable(resource=CustomerContext)
@@ -48,20 +125,28 @@ Examples:
         ... class CustomerGreeting(Greeting):
         ...     salutation: str = "Hello"
         ...
-        >>> scan(registry, "myapp.services")
+        >>> scan(registry, "myapp.services")  # doctest: +SKIP
+
+    Location-based scanning:
+        >>> @injectable(location=PurePath("/admin"))
+        ... @dataclass
+        ... class AdminService:
+        ...     name: str = "Admin"
+        ...
+        >>> scan(registry, "myapp.services")  # doctest: +SKIP
 
 For complete examples, see:
+- examples/location_based_resolution.py (location-based service selection)
 - examples/multiple_implementations.py (ServiceLocator usage)
 - examples/scanning/basic_scanning.py (simple scanning workflow)
 - examples/scanning/context_aware_scanning.py (resource-based resolution)
 """
 
-from __future__ import annotations
-
 import importlib
 import logging
 import pkgutil
 from dataclasses import dataclass, field
+from pathlib import PurePath
 from types import ModuleType
 from typing import Any, Optional
 
@@ -72,48 +157,93 @@ from svcs_di.auto import FieldInfo, Injector, get_field_infos
 log = logging.getLogger("svcs_di")
 
 
+# ============================================================================
+# Location Type Alias
+# ============================================================================
+
+Location = PurePath
+"""
+Type alias for PurePath representing hierarchical request context.
+
+Location represents hierarchical paths (URL paths, filesystem-like paths) used for
+location-based service resolution. It's a special service type that containers can
+have registered as a value service.
+
+Usage:
+    # Register Location in container
+    registry.register_value(Location, PurePath("/admin"))
+
+    # Services depend on Location
+    @dataclass
+    class MyService:
+        location: Injectable[Location]
+
+    # Use Location for hierarchical matching
+    admin_location = PurePath("/admin")
+    admin_users_location = PurePath("/admin/users")
+    # Check hierarchy: admin_users_location.is_relative_to(admin_location) -> True
+
+Thread-safety: PurePath is immutable and thread-safe, compatible with free-threaded Python.
+Hierarchy operations: Use `.parents` for traversal, `.is_relative_to()` for relationships.
+"""
+
+
 @dataclass(frozen=True)
 class FactoryRegistration:
-    """A single implementation registration with service type and optional resource.
+    """A single implementation registration with service type, optional resource, and optional location.
 
     The resource represents a business entity type (e.g., Customer, Employee, Product)
     that determines which implementation to use.
+
+    The location represents a hierarchical context (e.g., URL path like /admin, /public)
+    that restricts service availability to specific parts of the application hierarchy.
     """
 
     service_type: type
     implementation: type
     resource: Optional[type] = None
+    location: Optional[PurePath] = None
 
-    def matches(self, resource: Optional[type]) -> int:
+    def matches(self, resource: Optional[type], location: Optional[PurePath] = None) -> int:
         """
-        Calculate match score for this registration against a resource type.
+        Calculate match score for this registration.
 
-        Args:
-            resource: The resource type to match against (e.g., Customer, Employee)
+        Scoring weights (designed for clear precedence):
+        - Location: 1000 (exact) or 0 (global/no-match)
+        - Resource: 100 (exact), 10 (subclass), 0 (default)
 
-        Returns:
-            2 = exact resource match (highest)
-            1 = subclass resource match (medium)
-            0 = no resource match (lowest/default)
-            -1 = no match
+        Returns -1 for no match, otherwise sum of location + resource scores.
+        Higher scores indicate better matches.
         """
-        match (self.resource, resource):
-            case (None, None):
-                return 0  # Default match
-            case (r, req) if r is req:
-                return 2  # Exact match
-            case (None, _):
-                return 0  # Default fallback
-            case (r, req) if req is not None and r is not None and issubclass(req, r):
-                return 1  # Subclass match
+        # Location scoring: binary (match or no-match)
+        match (self.location, location):
+            case (None, _):  # Global registration - available everywhere
+                location_score = 0
+            case (loc, None):  # Location-specific registration, but no location requested
+                return -1  # No match
+            case (loc, req) if loc == req or req.is_relative_to(loc):
+                location_score = 1000  # Match (exact or hierarchical)
             case _:
                 return -1  # No match
+
+        # Resource scoring: three-tier precedence
+        match (self.resource, resource):
+            case (None, _):  # Default/global
+                resource_score = 0
+            case (r, req) if r is req:  # Exact match
+                resource_score = 100
+            case (r, req) if req is not None and issubclass(req, r):  # Subclass
+                resource_score = 10
+            case _:
+                return -1  # No match
+
+        return location_score + resource_score
 
 
 @dataclass(frozen=True)
 class ServiceLocator:
     """
-    Thread-safe, immutable locator for multiple service implementations with resource-based selection.
+    Thread-safe, immutable locator for multiple service implementations with resource and location-based selection.
 
     This is the ONE locator for the entire application. Implementations are stored in LIFO
     order (most recent first). Selection uses three-tier precedence: exact > subclass > default.
@@ -121,57 +251,45 @@ class ServiceLocator:
     Resource-based matching allows different implementations to be selected based on business
     entity types like Customer, Employee, or Product.
 
-    Thread-safe: All data is immutable (frozen dataclass with tuple).
+    Location-based matching allows different implementations to be selected based on hierarchical
+    context like URL paths (/admin, /public). Hierarchical matching walks up the location tree
+    from most specific to least specific, stopping at the first level where matches are found.
 
-    Caching: Results are cached for performance. Cache is keyed by (service_type, resource_type)
+    Thread-safe: All data is immutable (frozen dataclass with dicts).
+
+    Performance Optimization: The system automatically uses a fast O(1) lookup path for service
+    types with a single registration, and switches to an O(m) scoring path only when a second
+    implementation is registered for the same service type (where m is the number of registrations
+    for that specific service). This makes the single-implementation case nearly as fast as using
+    svcs directly.
+
+    Caching: Results are cached for performance. Cache is keyed by (service_type, resource_type, location)
     tuple and stores the resolved implementation class or None.
 
     Example:
-        # Create with registrations
-        locator = ServiceLocator.with_registrations(
-            (Greeting, DefaultGreeting, None),
-            (Greeting, EmployeeGreeting, EmployeeContext),
-            (Database, PostgresDB, None),
-        )
-
-        # Or build up immutably
         locator = ServiceLocator()
         locator = locator.register(Greeting, DefaultGreeting)
         locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
+        locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
+        locator = locator.register(Database, PostgresDB)
     """
 
-    registrations: tuple[FactoryRegistration, ...] = field(default_factory=tuple)
-    _cache: dict[tuple[type, Optional[type]], Optional[type]] = field(
+    # Internal storage: service types with single registration use fast path
+    _single_registrations: dict[type, FactoryRegistration] = field(default_factory=dict)
+    # Internal storage: service types with multiple registrations use scoring path
+    _multi_registrations: dict[type, tuple[FactoryRegistration, ...]] = field(
+        default_factory=dict
+    )
+    _cache: dict[tuple[type, Optional[type], Optional[PurePath]], Optional[type]] = field(
         default_factory=dict
     )
 
-    @staticmethod
-    def with_registrations(
-        *registrations: tuple[type, type, Optional[type]],
-    ) -> "ServiceLocator":
-        """
-        Create ServiceLocator with registrations.
-
-        Args:
-            registrations: Variable number of (service_type, implementation, resource) tuples
-
-        Returns:
-            New ServiceLocator instance
-
-        Example:
-            locator = ServiceLocator.with_registrations(
-                (Greeting, DefaultGreeting, None),
-                (Greeting, EmployeeGreeting, EmployeeContext),
-            )
-        """
-        factory_regs = tuple(
-            FactoryRegistration(service_type, impl, ctx)
-            for service_type, impl, ctx in registrations
-        )
-        return ServiceLocator(registrations=factory_regs)
-
     def register(
-        self, service_type: type, implementation: type, resource: Optional[type] = None
+        self,
+        service_type: type,
+        implementation: type,
+        resource: Optional[type] = None,
+        location: Optional[PurePath] = None,
     ) -> "ServiceLocator":
         """
         Return new ServiceLocator with additional registration (immutable, thread-safe).
@@ -179,60 +297,158 @@ class ServiceLocator:
         LIFO ordering: new registrations are inserted at the front.
         Cache invalidation: new instance has empty cache since registrations changed.
 
+        Performance: First registration for a service type uses fast O(1) path. Second and
+        subsequent registrations switch to O(m) scoring path where m is registrations for
+        that specific service type.
+
         Args:
             service_type: The service type to register for
             implementation: The implementation class
             resource: Optional resource type for resource-specific resolution
+            location: Optional location (PurePath) for location-specific resolution
 
         Returns:
             New ServiceLocator with the registration prepended and cleared cache
         """
-        new_reg = FactoryRegistration(service_type, implementation, resource)
-        # Prepend for LIFO (most recent first)
-        new_registrations = (new_reg,) + self.registrations
+        new_reg = FactoryRegistration(service_type, implementation, resource, location)
+
+        # Copy existing dicts (immutable update pattern)
+        new_single = dict(self._single_registrations)
+        new_multi = {k: v for k, v in self._multi_registrations.items()}
+
+        # Case 1: First registration for this service_type (fast path)
+        if service_type not in new_single and service_type not in new_multi:
+            new_single[service_type] = new_reg
+
+        # Case 2: Second registration for this service_type (promote to multi)
+        elif service_type in new_single:
+            existing = new_single[service_type]
+            # LIFO: new registration first, then existing
+            new_multi[service_type] = (new_reg, existing)
+            del new_single[service_type]
+
+        # Case 3: Third+ registration for this service_type (add to multi)
+        else:  # service_type in new_multi
+            existing_tuple = new_multi[service_type]
+            # LIFO: prepend new registration
+            new_multi[service_type] = (new_reg,) + existing_tuple
+
         # Return new instance with empty cache (cache invalidation)
-        return ServiceLocator(registrations=new_registrations)
+        return ServiceLocator(
+            _single_registrations=new_single,
+            _multi_registrations=new_multi,
+        )
 
     def get_implementation(
-        self, service_type: type, resource: Optional[type] = None
+        self,
+        service_type: type,
+        resource: Optional[type] = None,
+        location: Optional[PurePath] = None,
     ) -> Optional[type]:
         """
-        Find best matching implementation class for a service type using three-tier precedence.
+        Find best matching implementation class for a service type using precedence scoring.
 
         The resource parameter specifies a business entity type (like Customer or Employee)
         to select the appropriate implementation.
 
-        Results are cached for performance. The cache key is (service_type, resource_type).
+        The location parameter specifies a hierarchical context (like PurePath("/admin"))
+        to select location-specific implementations. Location matching uses hierarchical
+        traversal: walks up the location tree from most specific to root, checking all
+        registrations at each level.
+
+        Results are cached for performance. The cache key is (service_type, resource_type, location).
+
+        Performance: Uses O(1) fast path for service types with single registration, O(m) scoring
+        path for multiple registrations (where m is registrations for that specific service type).
 
         Args:
             service_type: The service type to find an implementation for
             resource: Optional resource type for resource-based matching
+            location: Optional location for location-based matching
 
         Returns:
             The implementation class from the first registration with highest score.
 
         Thread-safe: Only reads immutable data (cache is mutated but that's thread-safe for dicts).
         """
-        cache_key = (service_type, resource)
+        cache_key = (service_type, resource, location)
 
         # Check cache first
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        # Cache miss - perform lookup
-        best_score = -1
         best_impl = None
 
-        for reg in self.registrations:
-            if reg.service_type is not service_type:
-                continue  # Skip registrations for other service types
-
-            score = reg.matches(resource)
-            if score > best_score:
-                best_score = score
+        # Fast path: single registration for this service type (O(1) lookup)
+        if service_type in self._single_registrations:
+            reg = self._single_registrations[service_type]
+            score = reg.matches(resource, location)
+            if score >= 0:  # Valid match (score 0 is valid for default registrations)
                 best_impl = reg.implementation
-                if score == 2:  # Exact match, can't do better
-                    break
+
+        # Slow path: multiple registrations for this service type (O(m) scoring with hierarchical location matching)
+        elif service_type in self._multi_registrations:
+            best_score = -1
+
+            # If location is provided, walk up the hierarchy from most specific to root
+            # At each level, check all registrations for matches
+            # Most specific location wins (deeper in hierarchy)
+            if location is not None:
+                # Generate hierarchy: current location, then all parents up to root
+                # Example: /admin/users/profile -> [/admin/users/profile, /admin/users, /admin, /]
+                hierarchy = [location] + list(location.parents)
+
+                # Track the best match found at each hierarchy level
+                # We want the most specific location to win
+                level_best_impl = None  # Track best global match as fallback
+                level_best_score = -1
+
+                for current_location in hierarchy:
+                    location_best_score = -1
+                    location_best_impl = None
+                    found_location_specific = False  # Track if we found a location-specific match
+
+                    # Check all registrations at this hierarchy level
+                    for reg in self._multi_registrations[service_type]:
+                        # At this level, consider:
+                        # 1. Registrations at exactly this location (highest priority)
+                        # 2. Global registrations (location=None) as fallback (lower priority)
+                        if reg.location == current_location:
+                            # Exact location match - this level has a location-specific service
+                            found_location_specific = True
+                            score = reg.matches(resource, current_location)
+                            if score > location_best_score:
+                                location_best_score = score
+                                location_best_impl = reg.implementation
+                        elif reg.location is None:
+                            # Global registration - available everywhere, but lower priority
+                            score = reg.matches(resource, current_location)
+                            if score > level_best_score:
+                                level_best_score = score
+                                level_best_impl = reg.implementation
+
+                    # Only stop if we found a location-specific match at this level
+                    # (not just a global match - we want to continue searching up the hierarchy)
+                    if found_location_specific and location_best_impl is not None:
+                        best_impl = location_best_impl
+                        best_score = location_best_score
+                        break  # Stop at first level with location-specific matches (most specific wins)
+
+                # If we never found a location-specific match, use the best global match
+                if best_impl is None and level_best_impl is not None:
+                    best_impl = level_best_impl
+                    best_score = level_best_score
+            else:
+                # No location specified - use standard scoring
+                for reg in self._multi_registrations[service_type]:
+                    score = reg.matches(resource, location)
+                    if score > best_score:
+                        best_score = score
+                        best_impl = reg.implementation
+                        # Early exit optimization for perfect score
+                        # Perfect score: exact location (1000) + exact resource (100) = 1100
+                        if score >= 1100:
+                            break
 
         # Store in cache before returning
         # Note: Mutating frozen dataclass's dict field is safe here because:
@@ -242,7 +458,6 @@ class ServiceLocator:
         self._cache[cache_key] = best_impl
 
         return best_impl
-
 
 def get_from_locator[T](
     container: svcs.Container,
@@ -262,15 +477,6 @@ def get_from_locator[T](
         locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
         locator = locator.register(Database, PostgresDB)
         locator = locator.register(Database, TestDB, resource=TestContext)
-        registry.register_value(ServiceLocator, locator)
-
-        # Or use the static constructor:
-        locator = ServiceLocator.with_registrations(
-            (Greeting, DefaultGreeting, None),
-            (Greeting, EmployeeGreeting, EmployeeContext),
-            (Database, PostgresDB, None),
-            (Database, TestDB, TestContext),
-        )
         registry.register_value(ServiceLocator, locator)
 
         # Get service (per request)
@@ -304,7 +510,7 @@ class HopscotchInjector:
     3. default values from field definitions (lowest priority)
 
     When resolving Injectable[T] fields, it first tries ServiceLocator.get_implementation()
-    with resource obtained from container. If no locator or no matching implementation is found,
+    with resource and location obtained from container. If no locator or no matching implementation is found,
     falls back to standard container.get(T) or container.get_abstract(T) behavior.
     """
 
@@ -336,6 +542,13 @@ class HopscotchInjector:
         except svcs.exceptions.ServiceNotFoundError:
             return None
 
+    def _get_location(self) -> Optional[PurePath]:
+        """Get the Location from container if registered."""
+        try:
+            return self.container.get(Location)
+        except svcs.exceptions.ServiceNotFoundError:
+            return None
+
     def _resolve_field_value_sync(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
     ) -> tuple[bool, Any]:
@@ -361,11 +574,12 @@ class HopscotchInjector:
             try:
                 locator = self.container.get(ServiceLocator)
                 resource_type = self._get_resource()
+                location = self._get_location()
 
-                implementation = locator.get_implementation(inner_type, resource_type)
+                implementation = locator.get_implementation(inner_type, resource_type, location)
                 if implementation is not None:
                     # Construct instance using the injector recursively (for nested injection)
-                    return (True, implementation())
+                    return (True, self(implementation))
             except svcs.exceptions.ServiceNotFoundError:
                 pass  # No locator registered, fall through to normal resolution
 
@@ -459,6 +673,13 @@ class HopscotchAsyncInjector:
         except svcs.exceptions.ServiceNotFoundError:
             return None
 
+    async def _get_location(self) -> Optional[PurePath]:
+        """Get the Location from container if registered."""
+        try:
+            return await self.container.aget(Location)
+        except svcs.exceptions.ServiceNotFoundError:
+            return None
+
     async def _resolve_field_value_async(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
     ) -> tuple[bool, Any]:
@@ -484,11 +705,12 @@ class HopscotchAsyncInjector:
             try:
                 locator = await self.container.aget(ServiceLocator)
                 resource_type = await self._get_resource()
+                location = await self._get_location()
 
-                implementation = locator.get_implementation(inner_type, resource_type)
+                implementation = locator.get_implementation(inner_type, resource_type, location)
                 if implementation is not None:
                     # Construct instance using the injector recursively (for nested injection)
-                    return (True, implementation())
+                    return (True, await self(implementation))
             except svcs.exceptions.ServiceNotFoundError:
                 pass  # No locator registered, fall through to normal resolution
 
@@ -580,13 +802,18 @@ def _register_decorated_items(
 
     for decorated_class, metadata in decorated_items:
         resource = metadata.get("resource")
+        location = metadata.get("location")
+        service_type = metadata.get("for_") or decorated_class  # Default to self if None
 
-        if resource is not None:
-            locator = locator.register(
-                decorated_class, decorated_class, resource=resource
-            )
+        # Use ServiceLocator for:
+        # 1. Resource-based registrations (resource != None)
+        # 2. Location-based registrations (location != None)
+        # 3. Multi-implementation scenarios (for_ != None, service_type != decorated_class)
+        if resource is not None or location is not None or service_type != decorated_class:
+            locator = locator.register(service_type, decorated_class, resource=resource, location=location)
             locator_modified = True
         else:
+            # Direct registry registration (no resource, no location, no service type override)
             factory = _create_injector_factory(decorated_class, injector_type)
             registry.register_factory(decorated_class, factory)
 
@@ -658,26 +885,90 @@ def _caller_package(level: int = 2) -> ModuleType | None:
 
 
 def _scan_locals(frame_locals: dict[str, Any]) -> list[tuple[type, dict[str, Any]]]:
-    """
-    Scan local variables in a scope for @injectable decorated classes.
+    """Scan local variables for @injectable decorated classes."""
+    return [
+        (obj, obj.__injectable_metadata__)
+        for obj in frame_locals.values()
+        if isinstance(obj, type) and hasattr(obj, "__injectable_metadata__")
+    ]
 
-    This enables testing patterns where decorated classes are defined
-    within a test function and then scanned without importing.
 
-    Args:
-        frame_locals: Dictionary of local variables (typically from locals())
+def _import_package(pkg: str) -> ModuleType | None:
+    """Import a package by string name, logging warnings on failure."""
+    try:
+        return importlib.import_module(pkg)
+    except ImportError as e:
+        log.warning(f"Failed to import package '{pkg}': {e}")
+        return None
 
-    Returns:
-        List of tuples: (decorated_class, metadata)
-    """
-    decorated_items: list[tuple[type, dict[str, Any]]] = []
 
-    for name, obj in frame_locals.items():
-        if isinstance(obj, type) and hasattr(obj, "__injectable_metadata__"):
-            metadata = obj.__injectable_metadata__
-            decorated_items.append((obj, metadata))
+def _collect_modules_to_scan(
+    packages: tuple[str | ModuleType | None, ...],
+) -> list[ModuleType]:
+    """Collect and import all packages to scan."""
+    modules = []
+    for pkg in packages:
+        match pkg:
+            case None:
+                continue
+            case str():
+                if module := _import_package(pkg):
+                    modules.append(module)
+            case ModuleType():
+                modules.append(pkg)
+            case _:
+                log.warning(
+                    f"Invalid package type: {type(pkg)}. Must be str, ModuleType, or None"
+                )
+    return modules
 
-    return decorated_items
+
+def _discover_submodules(module: ModuleType) -> list[ModuleType]:
+    """Discover all submodules within a package."""
+    if not hasattr(module, "__path__"):
+        return []
+
+    submodules = []
+    try:
+        for _, modname, _ in pkgutil.walk_packages(
+            path=module.__path__,  # type: ignore[attr-defined]
+            prefix=module.__name__ + ".",
+            onerror=lambda name: None,
+        ):
+            if submodule := _import_package(modname):
+                submodules.append(submodule)
+    except Exception as e:
+        log.warning(f"Error walking package '{module.__name__}': {e}")
+
+    return submodules
+
+
+def _discover_all_modules(modules_to_scan: list[ModuleType]) -> list[ModuleType]:
+    """Discover all modules including submodules from packages."""
+    discovered = list(modules_to_scan)
+    for module in modules_to_scan:
+        discovered.extend(_discover_submodules(module))
+    return discovered
+
+
+def _extract_decorated_items(module: ModuleType) -> list[tuple[type, dict[str, Any]]]:
+    """Extract @injectable decorated classes from a module."""
+    items = []
+    for attr_name in dir(module):
+        try:
+            attr = getattr(module, attr_name)
+            if isinstance(attr, type) and hasattr(attr, "__injectable_metadata__"):
+                items.append((attr, attr.__injectable_metadata__))
+        except (AttributeError, ImportError):
+            continue
+    return items
+
+
+def _collect_decorated_items(
+    modules: list[ModuleType],
+) -> list[tuple[type, dict[str, Any]]]:
+    """Collect all @injectable decorated items from modules."""
+    return [item for module in modules for item in _extract_decorated_items(module)]
 
 
 def scan(
@@ -690,8 +981,9 @@ def scan(
     Scan packages/modules for @injectable decorated classes and register them.
 
     Discovers and registers services marked with @injectable decorator. Classes with
-    resource metadata are registered to ServiceLocator for resource-based resolution.
-    Classes without resource metadata are registered directly to Registry.
+    resource or location metadata are registered to ServiceLocator for resource-based or
+    location-based resolution. Classes without resource/location metadata are registered
+    directly to Registry.
 
     Args:
         registry: svcs.Registry to register services into
@@ -718,20 +1010,15 @@ def scan(
 
         injector_type = DefaultInjector
 
-    # Handle locals_dict scanning for testing (local scope scanning)
+    # Handle locals_dict scanning for testing
     if locals_dict is not None:
         decorated_items = _scan_locals(locals_dict)
         _register_decorated_items(registry, decorated_items, injector_type)
         return registry
 
-    # ========================================================================
-    # Handle package/module scanning
-    # ========================================================================
-
-    # If no packages specified, auto-detect caller's package
+    # Auto-detect caller's package if not specified
     if not packages or (len(packages) == 1 and packages[0] is None):
-        caller_pkg = _caller_package(level=2)
-        if caller_pkg is not None:
+        if caller_pkg := _caller_package(level=2):
             packages = (caller_pkg,)
         else:
             log.warning(
@@ -739,67 +1026,9 @@ def scan(
             )
             return registry
 
-    # Collect all modules to scan
-    modules_to_scan: list[ModuleType] = []
-
-    for pkg in packages:
-        if pkg is None:
-            # Skip None values (might occur in mixed usage)
-            continue
-        elif isinstance(pkg, str):
-            # String package name - import it
-            try:
-                module = importlib.import_module(pkg)
-                modules_to_scan.append(module)
-            except ImportError as e:
-                log.warning(f"Failed to import package '{pkg}': {e}")
-                continue
-        elif isinstance(pkg, ModuleType):
-            # Already a module - use directly (no sys.modules hack needed!)
-            modules_to_scan.append(pkg)
-        else:
-            log.warning(
-                f"Invalid package type: {type(pkg)}. Must be str, ModuleType, or None"
-            )
-            continue
-
-    # Walk through packages and discover submodules
-    discovered_modules: list[ModuleType] = []
-
-    for module in modules_to_scan:
-        discovered_modules.append(module)
-
-        # Check if this is a package (has __path__)
-        if hasattr(module, "__path__"):
-            # Use pkgutil.walk_packages to discover submodules
-            try:
-                for importer, modname, ispkg in pkgutil.walk_packages(
-                    path=module.__path__,  # type: ignore[attr-defined]
-                    prefix=module.__name__ + ".",
-                    onerror=lambda name: None,
-                ):
-                    try:
-                        submodule = importlib.import_module(modname)
-                        discovered_modules.append(submodule)
-                    except ImportError as e:
-                        log.warning(f"Failed to import submodule '{modname}': {e}")
-                        continue
-            except Exception as e:
-                log.warning(f"Error walking package '{module.__name__}': {e}")
-
-    # Collect decorated items from all discovered modules
-    decorated_items: list[tuple[type, dict[str, Any]]] = []
-
-    for module in discovered_modules:
-        for attr_name in dir(module):
-            try:
-                attr = getattr(module, attr_name)
-                if isinstance(attr, type) and hasattr(attr, "__injectable_metadata__"):
-                    metadata = attr.__injectable_metadata__
-                    decorated_items.append((attr, metadata))
-            except (AttributeError, ImportError):
-                continue
-
-    # Register all decorated items
+    # Collect, discover, and register
+    modules_to_scan = _collect_modules_to_scan(packages)
+    discovered_modules = _discover_all_modules(modules_to_scan)
+    decorated_items = _collect_decorated_items(discovered_modules)
     _register_decorated_items(registry, decorated_items, injector_type)
     return registry

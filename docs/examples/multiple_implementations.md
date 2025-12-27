@@ -19,13 +19,13 @@ The multiple implementations feature enables:
 
 Tracks multiple implementations across all service types.
 
-**Example:** See [Quick Start](#quick-start) section below for complete registration example.
+**Example:** See Quick Start section below for complete registration example.
 
 ### HopscotchInjector
 
 Injectable field resolution with locator support.
 
-**Example:** See [Quick Start](#quick-start) section below for complete usage example.
+**Example:** See Quick Start section below for complete usage example.
 
 ## Quick Start
 

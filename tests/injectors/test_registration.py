@@ -69,9 +69,8 @@ def test_resource_based_registrations_use_service_locator():
 
         # Verify registrations exist in locator (check both single and multi paths)
         assert locator is not None
-        total_registrations = (
-            len(locator._single_registrations) +
-            sum(len(regs) for regs in locator._multi_registrations.values())
+        total_registrations = len(locator._single_registrations) + sum(
+            len(regs) for regs in locator._multi_registrations.values()
         )
         assert total_registrations > 0
 

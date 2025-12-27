@@ -28,7 +28,7 @@ Based on [GitHub Discussion #94](https://github.com/hynek/svcs/discussions/94):
     - pytest-cov for coverage reporting
     - pytest-xdist for parallel test execution
     - pytest-timeout for detecting hangs/deadlocks in free-threaded mode
-    - pytest-freethreaded for free-threaded Python compatibility testing
+    - pytest-run-parallel for free-threaded Python compatibility testing
 - **Documentation Testing:** Sybil for testing code examples in documentation
 - **Linting & Formatting:** Ruff (linting and formatting)
 - **Type Checking:** Modern Python type hints with protocol support (ty for type utilities)

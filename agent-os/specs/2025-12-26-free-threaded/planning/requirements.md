@@ -10,7 +10,7 @@ Free threaded
 **Q1:** I assume the primary goal is to **verify and formally test** that the existing code works with PEP 703's free-threaded Python (no-GIL mode), rather than making major architectural changes. Is that correct, or do you anticipate discovering issues that need fixing?
 **Answer:** Yes - Verify and formally test that existing code works with PEP 703's free-threaded Python (no-GIL mode)
 
-**Q2:** I'm thinking we should add **pytest-freethreaded** to the dev dependencies (as mentioned in tech-stack.md) and create a dedicated test suite that runs with `python3.13t` (free-threaded build). Should we also add CI/CD testing with free-threaded Python builds to catch regressions?
+**Q2:** I'm thinking we should add **pytest-run-parallel** to the dev dependencies (as mentioned in tech-stack.md) and create a dedicated test suite that runs with `python3.13t` (free-threaded build). Should we also add CI/CD testing with free-threaded Python builds to catch regressions?
 **Answer:** Use pytest-run-parallel as recommended in the free threaded guide https://py-free-threading.github.io (not pytest-freethreaded)
 
 **Q3:** For the existing code that already mentions thread-safety (like ServiceLocator's cache), should we add **concurrent access stress tests** that spawn multiple threads to verify these claims, or just document the existing design patterns?

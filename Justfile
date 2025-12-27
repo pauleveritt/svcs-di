@@ -83,12 +83,12 @@ coverage-report:
     uv run coverage html
     @echo "HTML coverage report generated in htmlcov/index.html"
 
-# Run free-threaded Python tests
-test-freethreaded:
-    uv run pytest -p freethreaded -p no:doctest --threads=8 --iterations=10 --require-gil-disabled tests/test_free_threading.py
+# Run free-threaded Python tests with pytest-run-parallel
+test-run-parallel:
+    uv run pytest -p no:doctest --parallel-threads=8 --iterations=10 tests/test_free_threading.py
 
 # Run all CI checks including free-threading tests
-ci-checks-ft: quality test-cov test-freethreaded
+ci-checks-ft: quality test-cov test-run-parallel
 
 # Enable pre-push hook to run ci-checks before pushing - installs git hook
 # Automatically runs full quality checks before every git push

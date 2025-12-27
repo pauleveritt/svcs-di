@@ -72,7 +72,9 @@ class _InjectableDecorator:
 
         # Called decorator: @injectable() or @injectable(for_=X, resource=Y, location=Z)
         def decorator(cls: type) -> type:
-            return _mark_injectable(cls, for_=for_, resource=resource, location=location)
+            return _mark_injectable(
+                cls, for_=for_, resource=resource, location=location
+            )
 
         return decorator  # type: ignore[return-value]
 

@@ -11,7 +11,6 @@ Tests cover:
 from dataclasses import dataclass
 from typing import Protocol
 
-import pytest
 import svcs
 
 from svcs_di.auto import Injectable
@@ -159,7 +158,9 @@ def test_for_with_protocol():
     default_impl = locator.get_implementation(GreetingProtocol, resource=None)
     assert default_impl is DefaultGreeting
 
-    customer_impl = locator.get_implementation(GreetingProtocol, resource=CustomerContext)
+    customer_impl = locator.get_implementation(
+        GreetingProtocol, resource=CustomerContext
+    )
     assert customer_impl is CustomerGreeting
 
 

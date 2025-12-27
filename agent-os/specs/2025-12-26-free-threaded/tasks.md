@@ -163,12 +163,12 @@ Total Tasks: 5 task groups covering test infrastructure, concurrent testing, CI/
 
 - [x] 5.0 Complete CI/CD integration for free-threaded testing
   - [x] 5.1 Create justfile recipe for free-threaded tests
-    - Add `test-freethreaded` recipe to justfile
+    - Add `test-run-parallel` recipe to justfile
     - Command: `uv run pytest -p freethreaded -p no:doctest --threads=8 --iterations=10 --require-gil-disabled tests/test_free_threading.py`
     - This runs free-threading tests with 8 threads and 10 iterations
   - [x] 5.2 Create combined CI checks recipe
     - Add `ci-checks-ft` recipe to justfile
-    - Command: `just quality && just test-cov && just test-freethreaded`
+    - Command: `just quality && just test-cov && just test-run-parallel`
     - This runs all quality checks, full test suite, and free-threading tests
   - [x] 5.3 Update pytest configuration for free-threading
     - Verify pyproject.toml has `-p no:freethreaded` in addopts (line 42)
@@ -186,7 +186,7 @@ Total Tasks: 5 task groups covering test infrastructure, concurrent testing, CI/
     - All tests should pass with no deadlocks or timeouts
 
 **Acceptance Criteria:**
-- `just test-freethreaded` recipe works correctly
+- `just test-run-parallel` recipe works correctly
 - `just ci-checks-ft` recipe runs all checks including free-threading tests
 - CI workflow is configured to run python3.14t free-threaded build
 - All CI checks pass locally
@@ -203,7 +203,7 @@ Total Tasks: 5 task groups covering test infrastructure, concurrent testing, CI/
     - Verify all existing tests still pass
     - Confirm no regressions introduced by new test infrastructure
   - [x] 6.2 Run free-threading tests multiple times for stability
-    - Run: `just test-freethreaded` at least 3 times
+    - Run: `just test-run-parallel` at least 3 times
     - Verify consistent results (no flaky tests)
     - Confirm no intermittent deadlocks or race conditions
   - [x] 6.3 Document thread-safety design patterns in test module
@@ -259,7 +259,7 @@ The codebase relies on **immutability** rather than locks:
 
 ### Test Execution
 - Free-threading tests are in: `tests/test_free_threading.py`
-- Run free-threading tests: `just test-freethreaded`
+- Run free-threading tests: `just test-run-parallel`
 - Run all CI checks including free-threading: `just ci-checks-ft`
 - Tests are opt-in via `-p freethreaded` flag (default is `-p no:freethreaded`)
 
@@ -286,5 +286,5 @@ All task groups have been successfully implemented:
 2. **ServiceLocator Thread-Safety (Task Group 2)**: Implemented 5 tests verifying concurrent cache access, registration, immutability, and idempotent cache behavior
 3. **Injector Thread-Safety (Task Group 3)**: Implemented 4 tests for concurrent sync/async injection, multifield services, and location-based resolution
 4. **Decorator & Scanning (Task Group 4)**: Implemented 4 tests for concurrent decorator application, scanning, and end-to-end workflows
-5. **CI/CD Integration (Task Group 5)**: Created justfile recipes (test-freethreaded, ci-checks-ft) and verified CI configuration
+5. **CI/CD Integration (Task Group 5)**: Created justfile recipes (test-run-parallel, ci-checks-ft) and verified CI configuration
 6. **Final Verification (Task Group 6)**: Verified all tests pass (288 total tests including 16 free-threading tests), 87% code coverage maintained

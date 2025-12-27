@@ -34,7 +34,7 @@ test-parallel *ARGS:
 
 # Run tests with free-threading safety checks - tests for Python 3.14t GIL-free threading issues
 # Runs tests 10 times across 8 threads to catch race conditions and deadlocks
-test-freethreaded:
+test-run-parallel:
     uv run pytest -p freethreaded -p no:doctest --threads=8 --iterations=10 --require-gil-disabled tests
 
 # Lint code (check for issues) - runs ruff linter to find code quality issues, doesn't modify files
@@ -98,7 +98,7 @@ ci-checks:
 # Run all checks + free-threading safety tests - extends ci-checks with GIL-free tests
 # Use this for comprehensive testing before releases
 ci-checks-ft:
-    just ci-checks && just test-freethreaded
+    just ci-checks && just test-run-parallel
 
 # Enable pre-push hook to run ci-checks before pushing - installs git hook
 # Automatically runs full quality checks before every git push

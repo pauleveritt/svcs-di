@@ -10,7 +10,7 @@ Verify and formally test that the existing svcs-di codebase works correctly with
 ## Specific Requirements
 
 **Concurrent Access Testing Framework**
-- Add pytest-freethreaded to dev dependencies (version >=0.1.0)
+- Add pytest-run-parallel to dev dependencies (version >=0.1.0)
 - Create dedicated test module at tests/test_free_threading.py for all free-threading verification tests
 - Use threading.Thread to spawn multiple concurrent threads in stress tests
 - Configure tests with appropriate timeout values to catch deadlocks (leverage existing 60s pytest timeout)
@@ -55,8 +55,8 @@ Verify and formally test that the existing svcs-di codebase works correctly with
 - Confirm no global state exists that could be mutated across threads
 
 **CI/CD Integration**
-- Create new justfile recipe test-freethreaded that runs: pytest -p freethreaded -p no:doctest --threads=8 --iterations=10 --require-gil-disabled tests
-- Create ci-checks-ft recipe that runs: just ci-checks && just test-freethreaded
+- Create new justfile recipe test-run-parallel that runs: pytest -p freethreaded -p no:doctest --threads=8 --iterations=10 --require-gil-disabled tests
+- Create ci-checks-ft recipe that runs: just ci-checks && just test-run-parallel
 - Update existing CI workflow to use python3.14t free-threaded build
 - Configure pytest to run free-threading tests with -p freethreaded flag (opposite of current -p no:freethreaded)
 - Ensure CI catches deadlocks using existing timeout configuration (60s pytest, 120s faulthandler)
@@ -107,8 +107,8 @@ No visual assets provided.
 
 **Free-threading patterns from tdom-path reference project**
 - Free-threaded build detection: sysconfig.get_config_var("Py_GIL_DISABLED")
-- pytest-freethreaded plugin configuration with --threads=8 --iterations=10 --require-gil-disabled
-- Justfile recipe pattern: test-freethreaded and ci-checks-ft
+- pytest-run-parallel plugin configuration with --threads=8 --iterations=10 --require-gil-disabled
+- Justfile recipe pattern: test-run-parallel and ci-checks-ft
 - pyproject.toml: pytest.ini_options with -p no:freethreaded as default (enable explicitly for free-threading tests)
 - CI/CD: GitHub Actions with python3.14t free-threaded build and 30-minute timeout
 - Timeout configuration for deadlock detection: timeout = 60, faulthandler_timeout = 120

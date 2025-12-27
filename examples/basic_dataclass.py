@@ -33,7 +33,7 @@ def main():
     """Demonstrate basic dataclass injection."""
     # Create registry and register services
     registry = svcs.Registry()
-    registry.register_factory(Database, auto(Database))
+    registry.register_factory(Database, Database)
     registry.register_factory(Service, auto(Service))
 
     # Get the service - dependencies are automatically resolved

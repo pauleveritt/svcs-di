@@ -42,10 +42,22 @@
    and system vs site registration priority.`L`
 
 10. [x] Free-Threaded Python Compatibility — Verify and document free-threaded Python (PEP 703) compatibility, add
-    specific tests using pytest-freethreaded, ensure thread-safe container operations, and document any threading
+    specific tests using `pytest-run-parallel`, ensure thread-safe container operations, and document any threading
     considerations or limitations. `M`
 
-11. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
+11. [x] GitHub Workflows — Analyze `~/projects/t-strings/tdom-path/` for a project with the correct structure. Look in
+    its `.github` for the setup, `Justfile` for the recipes, and any `pyproject.toml` for any dependencies. Use a
+    composite action for reuse. The GitHub workflows should use the Just recipes. Workflow dependency caching with `uv`.
+    `S`
+
+12. [] Specifications Into Sphinx — Analyze this project's `agent-os/product/` and `agent-os/specs/` to link into a
+    `docs/specifications/index.md` in Sphinx. Have an ordered `toctree` that brings them in. The `index.md` should have
+    a descriptive listing, with a `Prooduct` heading having some text, then sections for `mission.md`, `roadmap.md`, and
+    `tech-stack.md`. Each subsection heading has a "Read More" a link to the full document with some summary text. Then
+    a `Features` section with subsections that do the same for each directory in `specs`: a heading, a short summary of
+    that feature, and a "Read More" link. `M`
+
+13. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
     context/location matching, add benchmarks comparing with plain `svcs` and other DI approaches, document performance
     characteristics and trade-offs. `M`
 

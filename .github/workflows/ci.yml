@@ -15,8 +15,17 @@ jobs:
         uses: ./.github/actions/setup-python-uv
 
       - name: Install just
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+        uses: extractions/setup-just@v2
 
       - name: Run CI checks (including free-threading safety)
         run: just ci-checks-ft
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(uv run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "::warning::Coverage is ${COVERAGE}% which is below the 80% threshold"
+          else
+            echo "Coverage is ${COVERAGE}% which meets the 80% threshold"
+          fi
+        continue-on-error: false

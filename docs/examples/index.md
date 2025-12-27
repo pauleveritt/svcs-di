@@ -21,6 +21,12 @@ The examples progress from simple dependency injection patterns to advanced cust
 5. **[Custom Injector Implementations](custom_injector.md)** - *Advanced*
    Extend svcs-di with custom injection logic for advanced use cases.
 
+6. **[Multiple Service Implementations](multiple_implementations.md)** - *Advanced*
+   Register and resolve multiple implementations for the same service type using resource-based resolution.
+
+7. **[Scanning Examples](scanning.md)** - *Intermediate-Advanced*
+   Automatically discover and register services using the `@injectable` decorator and `scan()` function.
+
 ## Getting Started
 
 If you're new to svcs-di, start with the [Basic Dataclass Injection](basic_dataclass.md) example and work your way through in order. Each example builds on concepts from previous ones while introducing new patterns.
@@ -36,4 +42,6 @@ protocol_injection
 async_injection
 kwargs_override
 custom_injector
+multiple_implementations
+scanning
 ```

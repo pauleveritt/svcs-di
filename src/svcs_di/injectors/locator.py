@@ -204,7 +204,9 @@ class FactoryRegistration:
     resource: Optional[type] = None
     location: Optional[PurePath] = None
 
-    def matches(self, resource: Optional[type], location: Optional[PurePath] = None) -> int:
+    def matches(
+        self, resource: Optional[type], location: Optional[PurePath] = None
+    ) -> int:
         """
         Calculate match score for this registration.
 
@@ -219,7 +221,10 @@ class FactoryRegistration:
         match (self.location, location):
             case (None, _):  # Global registration - available everywhere
                 location_score = 0
-            case (loc, None):  # Location-specific registration, but no location requested
+            case (
+                loc,
+                None,
+            ):  # Location-specific registration, but no location requested
                 return -1  # No match
             case (loc, req) if loc == req or req.is_relative_to(loc):
                 location_score = 1000  # Match (exact or hierarchical)
@@ -280,8 +285,8 @@ class ServiceLocator:
     _multi_registrations: dict[type, tuple[FactoryRegistration, ...]] = field(
         default_factory=dict
     )
-    _cache: dict[tuple[type, Optional[type], Optional[PurePath]], Optional[type]] = field(
-        default_factory=dict
+    _cache: dict[tuple[type, Optional[type], Optional[PurePath]], Optional[type]] = (
+        field(default_factory=dict)
     )
 
     def register(
@@ -406,7 +411,9 @@ class ServiceLocator:
                 for current_location in hierarchy:
                     location_best_score = -1
                     location_best_impl = None
-                    found_location_specific = False  # Track if we found a location-specific match
+                    found_location_specific = (
+                        False  # Track if we found a location-specific match
+                    )
 
                     # Check all registrations at this hierarchy level
                     for reg in self._multi_registrations[service_type]:
@@ -458,6 +465,7 @@ class ServiceLocator:
         self._cache[cache_key] = best_impl
 
         return best_impl
+
 
 def get_from_locator[T](
     container: svcs.Container,
@@ -576,7 +584,9 @@ class HopscotchInjector:
                 resource_type = self._get_resource()
                 location = self._get_location()
 
-                implementation = locator.get_implementation(inner_type, resource_type, location)
+                implementation = locator.get_implementation(
+                    inner_type, resource_type, location
+                )
                 if implementation is not None:
                     # Construct instance using the injector recursively (for nested injection)
                     return (True, self(implementation))
@@ -707,7 +717,9 @@ class HopscotchAsyncInjector:
                 resource_type = await self._get_resource()
                 location = await self._get_location()
 
-                implementation = locator.get_implementation(inner_type, resource_type, location)
+                implementation = locator.get_implementation(
+                    inner_type, resource_type, location
+                )
                 if implementation is not None:
                     # Construct instance using the injector recursively (for nested injection)
                     return (True, await self(implementation))
@@ -803,14 +815,22 @@ def _register_decorated_items(
     for decorated_class, metadata in decorated_items:
         resource = metadata.get("resource")
         location = metadata.get("location")
-        service_type = metadata.get("for_") or decorated_class  # Default to self if None
+        service_type = (
+            metadata.get("for_") or decorated_class
+        )  # Default to self if None
 
         # Use ServiceLocator for:
         # 1. Resource-based registrations (resource != None)
         # 2. Location-based registrations (location != None)
         # 3. Multi-implementation scenarios (for_ != None, service_type != decorated_class)
-        if resource is not None or location is not None or service_type != decorated_class:
-            locator = locator.register(service_type, decorated_class, resource=resource, location=location)
+        if (
+            resource is not None
+            or location is not None
+            or service_type != decorated_class
+        ):
+            locator = locator.register(
+                service_type, decorated_class, resource=resource, location=location
+            )
             locator_modified = True
         else:
             # Direct registry registration (no resource, no location, no service type override)

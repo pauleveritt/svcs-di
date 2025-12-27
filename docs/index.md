@@ -1,7 +1,6 @@
-# svcs-di
-
 ```{include} ../README.md
-:start-after: "# svcs-di"
+:relative-docs: docs/
+:relative-images:
 ```
 
 ```{toctree}
@@ -9,12 +8,12 @@
 :hidden:
 
 examples/index
-guides/index
-reference/index
+core-concepts
+api-reference
 ```
 
 ## Next Steps
 
 - Explore [Examples](examples/index.md) to see svcs-di in action with practical code samples
-- Read [Core Concepts](guides/core-concepts.md) to understand the architecture
-- Check [API Reference](reference/api-reference.md) for detailed function documentation
+- Read [Core Concepts](core-concepts.md) to understand the architecture
+- Check [API Reference](api-reference.md) for detailed function documentation

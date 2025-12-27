@@ -145,7 +145,7 @@ All 16 free-threading tests verify critical concurrent access patterns:
 
 ### CI/CD Integration
 - **Justfile recipes configured:**
-  - `test-freethreaded`: Runs free-threading tests with 8 threads and 10 iterations
+  - `test-run-parallel`: Runs free-threading tests with 8 threads and 10 iterations
   - `ci-checks-ft`: Runs all quality checks, full test suite, and free-threading tests
 - **GitHub Actions CI:** Configured for python3.14t free-threaded build (`.github/workflows/ci.yml`)
 - **pytest configuration:** Free-threading tests are opt-in via `-p freethreaded` flag

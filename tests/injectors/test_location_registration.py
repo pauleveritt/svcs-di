@@ -8,7 +8,6 @@ import svcs
 
 from svcs_di.injectors.locator import (
     FactoryRegistration,
-    Location,
     ServiceLocator,
 )
 
@@ -53,9 +52,7 @@ def test_register_service_with_location_parameter():
     locator = ServiceLocator()
     admin_location = PurePath("/admin")
 
-    locator = locator.register(
-        Greeting, AdminGreeting, location=admin_location
-    )
+    locator = locator.register(Greeting, AdminGreeting, location=admin_location)
 
     # Single registration uses fast path
     assert len(locator._single_registrations) == 1
@@ -72,9 +69,7 @@ def test_register_service_with_resource_and_location():
     admin_location = PurePath("/admin")
 
     locator = locator.register(
-        Greeting, AdminGreeting,
-        resource=AdminContext,
-        location=admin_location
+        Greeting, AdminGreeting, resource=AdminContext, location=admin_location
     )
 
     # Single registration uses fast path
@@ -95,14 +90,14 @@ def test_location_stored_in_registration_metadata():
         service_type=Greeting,
         implementation=AdminGreeting,
         resource=None,
-        location=admin_location
+        location=admin_location,
     )
 
     reg2 = FactoryRegistration(
         service_type=Greeting,
         implementation=PublicGreeting,
         resource=None,
-        location=public_location
+        location=public_location,
     )
 
     assert reg1.location == admin_location
@@ -110,9 +105,7 @@ def test_location_stored_in_registration_metadata():
 
     # Test that location is None by default (backward compatibility)
     reg3 = FactoryRegistration(
-        service_type=Greeting,
-        implementation=DefaultGreeting,
-        resource=None
+        service_type=Greeting, implementation=DefaultGreeting, resource=None
     )
     assert reg3.location is None
 
@@ -174,10 +167,7 @@ def test_multiple_locations_for_same_service():
     assert len(regs) == 3
 
     # Verify each has correct location
-    registrations_by_impl = {
-        reg.implementation: reg.location
-        for reg in regs
-    }
+    registrations_by_impl = {reg.implementation: reg.location for reg in regs}
 
     assert registrations_by_impl[DefaultGreeting] is None
     assert registrations_by_impl[AdminGreeting] == admin_location

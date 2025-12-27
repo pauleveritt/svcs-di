@@ -729,7 +729,9 @@ def test_hierarchical_fallback_child_uses_parent_service():
     assert impl == AdminGreeting
 
     # Deep child location should also fall back
-    impl = locator.get_implementation(Greeting, location=PurePath("/admin/users/profile"))
+    impl = locator.get_implementation(
+        Greeting, location=PurePath("/admin/users/profile")
+    )
     assert impl == AdminGreeting
 
 
@@ -812,7 +814,9 @@ def test_most_specific_location_wins():
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting, location=PurePath("/"))
     locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
-    locator = locator.register(Greeting, AdminUsersGreeting, location=PurePath("/admin/users"))
+    locator = locator.register(
+        Greeting, AdminUsersGreeting, location=PurePath("/admin/users")
+    )
 
     # Request from /admin/users should get most specific match
     impl = locator.get_implementation(Greeting, location=PurePath("/admin/users"))
@@ -1043,9 +1047,10 @@ def test_end_to_end_container_creation_to_resolution(registry):
     locator = locator.register(Greeting, DefaultGreeting)  # Global default
     locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
     locator = locator.register(
-        Greeting, CustomerGreeting,
+        Greeting,
+        CustomerGreeting,
         location=PurePath("/public"),
-        resource=CustomerContext
+        resource=CustomerContext,
     )
     locator = locator.register(Database, PostgresDB)  # Global database
 
@@ -1072,39 +1077,30 @@ def test_combined_location_resource_precedence_scoring():
     # Register various combinations
     locator = locator.register(Greeting, DefaultGreeting)  # Score: 1
     locator = locator.register(
-        Greeting, AdminGreeting,
-        resource=EmployeeContext
+        Greeting, AdminGreeting, resource=EmployeeContext
     )  # Score with EmployeeContext: 11
     locator = locator.register(
-        Greeting, PublicGreeting,
-        location=PurePath("/public")
+        Greeting, PublicGreeting, location=PurePath("/public")
     )  # Score at /public: 101
     locator = locator.register(
-        Greeting, CustomerGreeting,
+        Greeting,
+        CustomerGreeting,
         location=PurePath("/public"),
-        resource=CustomerContext
+        resource=CustomerContext,
     )  # Score at /public with CustomerContext: 111
 
     # Test: Combined location+resource should win
     impl = locator.get_implementation(
-        Greeting,
-        resource=CustomerContext,
-        location=PurePath("/public")
+        Greeting, resource=CustomerContext, location=PurePath("/public")
     )
     assert impl == CustomerGreeting
 
     # Test: Location-only should beat resource-only at that location
-    impl = locator.get_implementation(
-        Greeting,
-        location=PurePath("/public")
-    )
+    impl = locator.get_implementation(Greeting, location=PurePath("/public"))
     assert impl == PublicGreeting
 
     # Test: Resource-only when no location specified
-    impl = locator.get_implementation(
-        Greeting,
-        resource=EmployeeContext
-    )
+    impl = locator.get_implementation(Greeting, resource=EmployeeContext)
     assert impl == AdminGreeting
 
 
@@ -1116,8 +1112,7 @@ def test_location_hierarchy_multiple_nesting_levels():
     locator = locator.register(Greeting, DefaultGreeting, location=PurePath("/"))
     locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
     locator = locator.register(
-        Greeting, AdminUsersGreeting,
-        location=PurePath("/admin/users")
+        Greeting, AdminUsersGreeting, location=PurePath("/admin/users")
     )
 
     @dataclass
@@ -1125,36 +1120,29 @@ def test_location_hierarchy_multiple_nesting_levels():
         salutation: str = "User Reports"
 
     locator = locator.register(
-        Greeting, ReportsGreeting,
-        location=PurePath("/admin/users/reports")
+        Greeting, ReportsGreeting, location=PurePath("/admin/users/reports")
     )
 
     # Test deep nesting resolution
     impl = locator.get_implementation(
-        Greeting,
-        location=PurePath("/admin/users/reports/monthly")
+        Greeting, location=PurePath("/admin/users/reports/monthly")
     )
     assert impl == ReportsGreeting
 
     # Test fallback to intermediate level
     impl = locator.get_implementation(
-        Greeting,
-        location=PurePath("/admin/users/settings")
+        Greeting, location=PurePath("/admin/users/settings")
     )
     assert impl == AdminUsersGreeting
 
     # Test fallback to higher level
     impl = locator.get_implementation(
-        Greeting,
-        location=PurePath("/admin/settings/security")
+        Greeting, location=PurePath("/admin/settings/security")
     )
     assert impl == AdminGreeting
 
     # Test fallback to root
-    impl = locator.get_implementation(
-        Greeting,
-        location=PurePath("/other/path")
-    )
+    impl = locator.get_implementation(Greeting, location=PurePath("/other/path"))
     assert impl == DefaultGreeting
 
 
@@ -1212,8 +1200,14 @@ def test_cache_behavior_with_location_lookups():
     assert impl3 == DefaultGreeting
 
     # Verify cache hits return same results
-    assert locator.get_implementation(Greeting, location=PurePath("/admin")) == AdminGreeting
-    assert locator.get_implementation(Greeting, location=PurePath("/public")) == PublicGreeting
+    assert (
+        locator.get_implementation(Greeting, location=PurePath("/admin"))
+        == AdminGreeting
+    )
+    assert (
+        locator.get_implementation(Greeting, location=PurePath("/public"))
+        == PublicGreeting
+    )
     assert locator.get_implementation(Greeting) == DefaultGreeting
 
 
@@ -1247,7 +1241,9 @@ def test_decorator_integration_with_location_scanning(registry):
 
     # Check location-based registrations go to locator
     admin_impl = locator.get_implementation(AdminService, location=PurePath("/admin"))
-    public_impl = locator.get_implementation(PublicService, location=PurePath("/public"))
+    public_impl = locator.get_implementation(
+        PublicService, location=PurePath("/public")
+    )
 
     assert admin_impl == AdminService
     assert public_impl == PublicService

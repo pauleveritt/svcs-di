@@ -87,6 +87,7 @@ def test_free_threaded_build_confirmed():
 # Task Group 2: ServiceLocator Thread-Safety
 # ============================================================================
 
+
 # Test fixtures for ServiceLocator tests
 @dataclass
 class Greeting:
@@ -276,6 +277,7 @@ def test_service_locator_idempotent_cache():
 # Task Group 3: Injector Thread-Safety
 # ============================================================================
 
+
 # Test fixtures for injector tests
 @dataclass
 class Database:
@@ -387,9 +389,7 @@ def test_hopscotch_injector_location_based_resolution():
     """Test concurrent location-based resolution."""
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
-    locator = locator.register(
-        Greeting, EmployeeGreeting, location=PurePath("/admin")
-    )
+    locator = locator.register(Greeting, EmployeeGreeting, location=PurePath("/admin"))
 
     results = []
     errors = []
@@ -556,6 +556,7 @@ def test_decorator_with_resource_and_location():
     def worker(worker_id: int):
         """Worker thread that applies decorator with metadata."""
         try:
+
             @injectable(resource=EmployeeContext, location=PurePath("/admin"))
             @dataclass
             class MetadataService:

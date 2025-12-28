@@ -8,10 +8,12 @@ registration, which is deferred to the scan() function.
 Usage::
 
     @injectable
+    @dataclass
     class Database:
         host: str = "localhost"
 
     @injectable(for_=Greeting, resource=CustomerContext)
+    @dataclass
     class CustomerGreeting(Greeting):
         salutation: str = "Hello"
 
@@ -22,6 +24,7 @@ Usage::
 See examples/scanning/ for complete examples.
 """
 
+import inspect
 from pathlib import PurePath
 from typing import Optional, overload
 
@@ -34,7 +37,19 @@ def _mark_injectable(
     resource: Optional[type] = None,
     location: Optional[PurePath] = None,
 ) -> type:
-    """Store metadata on target class for scan() to discover later."""
+    """
+    Store metadata on target class for scan() to discover later.
+
+    Raises:
+        TypeError: If target is not a class.
+    """
+    if not inspect.isclass(target):
+        msg = (
+            "The @injectable decorator can only be applied to classes. "
+            f"{target} is not a class."
+        )
+        raise TypeError(msg)
+
     target.__injectable_metadata__ = {  # type: ignore[attr-defined]
         "for_": for_,
         "resource": resource,

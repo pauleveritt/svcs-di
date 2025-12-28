@@ -24,9 +24,10 @@ class TestContext:
 
 
 def test_injectable_bare_decorator():
-    """Test bare @injectable decorator marks class for registration."""
+    """Test bare @injectable decorator marks dataclass for registration."""
 
     @injectable
+    @dataclass
     class SimpleService:
         pass
 
@@ -45,6 +46,7 @@ def test_injectable_with_resource_parameter():
     """Test @injectable(resource=CustomerContext) decorator."""
 
     @injectable(resource=CustomerContext)
+    @dataclass
     class CustomerService:
         pass
 
@@ -59,6 +61,7 @@ def test_injectable_without_resource():
     """Test @injectable() decorator (called without resource)."""
 
     @injectable()
+    @dataclass
     class DefaultService:
         pass
 
@@ -73,6 +76,7 @@ def test_injectable_metadata_storage_no_registration():
     """Test that @injectable stores metadata without performing registration."""
 
     @injectable(resource=EmployeeContext)
+    @dataclass
     class EmployeeService:
         pass
 
@@ -91,14 +95,17 @@ def test_injectable_multiple_decorators_same_type():
     """Test multiple @injectable decorators on different implementations of same service type."""
 
     @injectable
+    @dataclass
     class ServiceImplA:
         pass
 
     @injectable(resource=CustomerContext)
+    @dataclass
     class ServiceImplB:
         pass
 
     @injectable(resource=EmployeeContext)
+    @dataclass
     class ServiceImplC:
         pass
 
@@ -220,3 +227,38 @@ def test_injectable_multiple_implementations_same_for():
 
     assert EmployeeGreeting.__injectable_metadata__["for_"] is Greeting  # type: ignore[attr-defined]
     assert EmployeeGreeting.__injectable_metadata__["resource"] is EmployeeContext  # type: ignore[attr-defined]
+
+
+# ============================================================================
+# @injectable Decorator Error Tests
+# ============================================================================
+
+
+def test_injectable_rejects_function():
+    """Test that @injectable raises TypeError when applied to a function."""
+    import pytest
+
+    with pytest.raises(TypeError, match="can only be applied to classes"):
+
+        @injectable
+        def some_function():
+            pass
+
+
+def test_injectable_accepts_plain_class():
+    """Test that @injectable works with plain (non-dataclass) classes."""
+
+    @injectable
+    class PlainService:
+        def __init__(self, name: str):
+            self.name = name
+
+    # Check metadata is stored
+    assert hasattr(PlainService, "__injectable_metadata__")
+    metadata = PlainService.__injectable_metadata__
+    assert metadata["for_"] is None
+    assert metadata["resource"] is None
+
+    # Verify class works normally
+    instance = PlainService("test")
+    assert instance.name == "test"

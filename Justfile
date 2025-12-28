@@ -14,7 +14,7 @@ test:
 
 # Run tests with coverage
 test-cov:
-    uv run pytest --cov=svcs_di --cov-report=term-missing --cov-report=html
+    uv run pytest tests src --cov=svcs_di --cov-report=term-missing --cov-report=html
 
 # Run tests in parallel
 test-parallel:
@@ -77,11 +77,20 @@ ci-checks: quality test-cov
 doctest:
     uv run pytest src/ -v
 
-# Show coverage report
+# Show coverage report and check 80% threshold
 coverage-report:
+    #!/usr/bin/env bash
+    set -euo pipefail
     uv run coverage report
     uv run coverage html
-    @echo "HTML coverage report generated in htmlcov/index.html"
+    echo "HTML coverage report generated in htmlcov/index.html"
+    COVERAGE=$(uv run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+    if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+        echo "::warning::Coverage is ${COVERAGE}% which is below the 80% threshold"
+        exit 1
+    else
+        echo "Coverage is ${COVERAGE}% which meets the 80% threshold"
+    fi
 
 # Run free-threaded Python tests with pytest-run-parallel
 test-run-parallel:

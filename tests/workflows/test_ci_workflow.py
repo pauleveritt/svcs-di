@@ -119,8 +119,10 @@ def test_ci_workflow_has_coverage_threshold_check():
         "CI workflow should have a coverage threshold check step"
     )
     assert "run" in coverage_step, "Coverage threshold step should have a run command"
-    # Verify it checks for 80% threshold
-    assert "80" in coverage_step["run"], "Coverage threshold should check for 80%"
+    # Verify it uses the Justfile recipe that checks threshold
+    assert "just coverage-report" in coverage_step["run"], (
+        "Coverage threshold should use 'just coverage-report' recipe"
+    )
 
 
 def test_ci_workflow_timeout():

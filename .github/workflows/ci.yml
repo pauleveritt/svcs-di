@@ -21,11 +21,4 @@ jobs:
         run: just ci-checks-ft
 
       - name: Check coverage threshold
-        run: |
-          COVERAGE=$(uv run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "::warning::Coverage is ${COVERAGE}% which is below the 80% threshold"
-          else
-            echo "Coverage is ${COVERAGE}% which meets the 80% threshold"
-          fi
-        continue-on-error: false
+        run: just coverage-report

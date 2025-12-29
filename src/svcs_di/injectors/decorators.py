@@ -26,7 +26,7 @@ See examples/scanning/ for complete examples.
 
 import inspect
 from pathlib import PurePath
-from typing import Optional, overload
+from typing import Callable, Optional, overload
 
 __all__ = ["injectable"]
 
@@ -71,7 +71,7 @@ class _InjectDecorator:
         for_: Optional[type] = None,
         resource: Optional[type] = None,
         location: Optional[PurePath] = None,
-    ) -> type: ...
+    ) -> Callable[[type], type]: ...
 
     def __call__(
         self,
@@ -80,7 +80,7 @@ class _InjectDecorator:
         for_: Optional[type] = None,
         resource: Optional[type] = None,
         location: Optional[PurePath] = None,
-    ) -> type:
+    ) -> type | Callable[[type], type]:
         # Bare decorator: @injectable
         if target is not None:
             return _mark_injectable(target, for_=None, resource=None, location=None)
@@ -91,7 +91,7 @@ class _InjectDecorator:
                 cls, for_=for_, resource=resource, location=location
             )
 
-        return decorator  # type: ignore[return-value]
+        return decorator
 
 
 injectable = _InjectDecorator()

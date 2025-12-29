@@ -240,7 +240,7 @@ def test_injectable_rejects_function():
 
     with pytest.raises(TypeError, match="can only be applied to classes"):
 
-        @injectable
+        @injectable  # type: ignore[arg-type]
         def some_function():
             pass
 

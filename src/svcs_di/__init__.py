@@ -14,13 +14,17 @@ Key exports:
 - DefaultAsyncInjector: Default asynchronous injector implementation
 - KeywordInjector: Injector with kwargs override support (three-tier precedence)
 - KeywordAsyncInjector: Async injector with kwargs override support
+- InjectionTarget: Type alias for class or callable targets (type[T] | Callable[..., T])
+- AsyncInjectionTarget: Type alias for async targets (type[T] | Callable[..., Awaitable[T]])
 """
 
 from svcs_di.auto import (
+    AsyncInjectionTarget,
     AsyncInjector,
     DefaultAsyncInjector,
     DefaultInjector,
     Inject,
+    InjectionTarget,
     Injector,
     auto,
     auto_async,
@@ -37,4 +41,6 @@ __all__ = [
     "DefaultAsyncInjector",
     "KeywordInjector",
     "KeywordAsyncInjector",
+    "InjectionTarget",
+    "AsyncInjectionTarget",
 ]

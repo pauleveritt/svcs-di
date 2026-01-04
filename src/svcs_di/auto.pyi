@@ -14,13 +14,17 @@ import svcs
 # Type aliases
 type SvcsFactory[T] = Callable[..., T]
 type AsyncSvcsFactory[T] = Callable[..., Awaitable[T]]
+type InjectionTarget[T] = type[T] | Callable[..., T]
+type AsyncInjectionTarget[T] = type[T] | Callable[..., Awaitable[T]]
 
 # Injector Protocols
 class Injector(Protocol):
-    def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T: ...
 
 class AsyncInjector(Protocol):
-    async def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    async def __call__[T](
+        self, target: AsyncInjectionTarget[T], **kwargs: Any
+    ) -> T: ...
 
 # For type checkers: Inject[T] is just T
 # This makes type checkers understand that Inject[Greeting] has all Greeting attributes
@@ -48,12 +52,14 @@ def get_field_infos(target: type | Callable) -> list[FieldInfo]: ...
 @dataclass(frozen=True)
 class DefaultInjector:
     container: svcs.Container
-    def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T: ...
 
 @dataclass(frozen=True)
 class DefaultAsyncInjector:
     container: svcs.Container
-    async def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    async def __call__[T](
+        self, target: AsyncInjectionTarget[T], **kwargs: Any
+    ) -> T: ...
 
 def auto[T](
     target: type[T],

@@ -7,6 +7,7 @@ kwargs override functionality that was extracted from DefaultInjector.
 Helper functions are imported from svcs_di.auto to maintain a standalone DefaultInjector.
 """
 
+import inspect
 from dataclasses import dataclass
 from typing import Any
 
@@ -14,7 +15,9 @@ import svcs
 
 # Import helper functions from auto.py
 from svcs_di.auto import (
+    AsyncInjectionTarget,
     FieldInfo,
+    InjectionTarget,
     get_field_infos,
 )
 
@@ -36,14 +39,15 @@ class KeywordInjector:
     container: svcs.Container
 
     def _validate_kwargs(
-        self, target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any]
+        self, target: InjectionTarget | AsyncInjectionTarget, field_infos: list[FieldInfo], kwargs: dict[str, Any]
     ) -> None:
         """Validate that all kwargs match actual field names."""
         valid_field_names = {f.name for f in field_infos}
+        target_name = getattr(target, "__name__", repr(target))
         for kwarg_name in kwargs:
             if kwarg_name not in valid_field_names:
                 raise ValueError(
-                    f"Unknown parameter '{kwarg_name}' for {target.__name__}. "
+                    f"Unknown parameter '{kwarg_name}' for {target_name}. "
                     f"Valid parameters: {', '.join(sorted(valid_field_names))}"
                 )
 
@@ -85,16 +89,16 @@ class KeywordInjector:
 
         return False, None
 
-    def __call__[T](self, target: type[T], **kwargs: Any) -> T:
+    def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T:
         """
-        Inject dependencies and construct target instance.
+        Inject dependencies and construct target instance or call function.
 
         Args:
-            target: The class or callable to construct
+            target: A class or callable to invoke with resolved dependencies
             **kwargs: Keyword arguments that override any resolved dependencies
 
         Returns:
-            An instance of target with dependencies injected
+            Result of calling target with dependencies injected
 
         Raises:
             ValueError: If unknown kwargs are provided
@@ -109,7 +113,7 @@ class KeywordInjector:
             if has_value:
                 resolved_kwargs[field_info.name] = value
 
-        return target(**resolved_kwargs)
+        return target(**resolved_kwargs)  # type: ignore[return-value]
 
 
 @dataclass(frozen=True)
@@ -130,14 +134,15 @@ class KeywordAsyncInjector:
     container: svcs.Container
 
     def _validate_kwargs(
-        self, target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any]
+        self, target: InjectionTarget | AsyncInjectionTarget, field_infos: list[FieldInfo], kwargs: dict[str, Any]
     ) -> None:
         """Validate that all kwargs match actual field names."""
         valid_field_names = {f.name for f in field_infos}
+        target_name = getattr(target, "__name__", repr(target))
         for kwarg_name in kwargs:
             if kwarg_name not in valid_field_names:
                 raise ValueError(
-                    f"Unknown parameter '{kwarg_name}' for {target.__name__}. "
+                    f"Unknown parameter '{kwarg_name}' for {target_name}. "
                     f"Valid parameters: {', '.join(sorted(valid_field_names))}"
                 )
 
@@ -179,16 +184,16 @@ class KeywordAsyncInjector:
 
         return (False, None)
 
-    async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
+    async def __call__[T](self, target: AsyncInjectionTarget[T], **kwargs: Any) -> T:
         """
-        Async inject dependencies and construct target instance.
+        Async inject dependencies and construct target instance or call async function.
 
         Args:
-            target: The class or callable to construct
+            target: A class or async callable to invoke with resolved dependencies
             **kwargs: Keyword arguments that override any resolved dependencies
 
         Returns:
-            An instance of target with dependencies injected
+            Result of calling target with dependencies injected
 
         Raises:
             ValueError: If unknown kwargs are provided
@@ -203,4 +208,8 @@ class KeywordAsyncInjector:
             if has_value:
                 resolved_kwargs[field_info.name] = value
 
-        return target(**resolved_kwargs)
+        result = target(**resolved_kwargs)
+        # If target is an async callable, await the result
+        if inspect.iscoroutinefunction(target):
+            return await result  # type: ignore[return-value]
+        return result  # type: ignore[return-value]

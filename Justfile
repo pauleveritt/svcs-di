@@ -46,7 +46,7 @@ format-check:
 
 # Run type checking
 typecheck *ARGS:
-    PYTHONPATH=examples uv run ty check {{ ARGS }}
+    uv run ty check {{ ARGS }}
 
 # Run all quality checks (lint, format-check, typecheck)
 quality: lint format-check typecheck

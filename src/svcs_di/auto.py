@@ -42,6 +42,8 @@ class TypeHintResolutionError(Exception):
 
 type SvcsFactory[T] = Callable[..., T]
 type AsyncSvcsFactory[T] = Callable[..., Awaitable[T]]
+type InjectionTarget[T] = type[T] | Callable[..., T]
+type AsyncInjectionTarget[T] = type[T] | Callable[..., Awaitable[T]]
 
 
 # ============================================================================
@@ -52,16 +54,32 @@ type AsyncSvcsFactory[T] = Callable[..., Awaitable[T]]
 class Injector(Protocol):
     """Protocol for dependency injector that constructs instances with resolved dependencies."""
 
-    def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """Construct an instance of target with dependencies resolved."""
+    def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T:
+        """Construct an instance of target with dependencies resolved.
+
+        Args:
+            target: A class or callable to invoke with resolved dependencies
+            **kwargs: Additional keyword arguments to pass through
+
+        Returns:
+            Result of calling target with resolved dependencies
+        """
         ...
 
 
 class AsyncInjector(Protocol):
     """Protocol for async dependency injector."""
 
-    async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """Construct an instance of target with async dependencies resolved."""
+    async def __call__[T](self, target: AsyncInjectionTarget[T], **kwargs: Any) -> T:
+        """Construct an instance of target with async dependencies resolved.
+
+        Args:
+            target: A class or async callable to invoke with resolved dependencies
+            **kwargs: Additional keyword arguments to pass through
+
+        Returns:
+            Result of calling target with resolved dependencies
+        """
         ...
 
 
@@ -79,8 +97,16 @@ class DefaultInjector:
 
     container: svcs.Container
 
-    def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """Inject dependencies and construct target instance."""
+    def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T:
+        """Inject dependencies and construct target instance or call function.
+
+        Args:
+            target: A class or callable to invoke with resolved dependencies
+            **kwargs: Additional keyword arguments (not used in DefaultInjector)
+
+        Returns:
+            Result of calling target with resolved dependencies
+        """
         field_infos = get_field_infos(target)
 
         resolved_kwargs: dict[str, Any] = {}
@@ -89,7 +115,7 @@ class DefaultInjector:
             if has_value:
                 resolved_kwargs[field_info.name] = value
 
-        return target(**resolved_kwargs)
+        return target(**resolved_kwargs)  # type: ignore[return-value]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -106,8 +132,16 @@ class DefaultAsyncInjector:
 
     container: svcs.Container
 
-    async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
-        """Async inject dependencies and construct target instance."""
+    async def __call__[T](self, target: AsyncInjectionTarget[T], **kwargs: Any) -> T:
+        """Async inject dependencies and construct target instance or call async function.
+
+        Args:
+            target: A class or async callable to invoke with resolved dependencies
+            **kwargs: Additional keyword arguments (not used in DefaultAsyncInjector)
+
+        Returns:
+            Result of calling target with resolved dependencies
+        """
         field_infos = get_field_infos(target)
 
         resolved_kwargs: dict[str, Any] = {}
@@ -118,7 +152,11 @@ class DefaultAsyncInjector:
             if has_value:
                 resolved_kwargs[field_info.name] = value
 
-        return target(**resolved_kwargs)
+        result = target(**resolved_kwargs)
+        # If target is an async callable, await the result
+        if inspect.iscoroutinefunction(target):
+            return await result  # type: ignore[return-value]
+        return result  # type: ignore[return-value]
 
 
 # ============================================================================

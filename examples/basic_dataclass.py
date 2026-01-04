@@ -3,6 +3,7 @@
 This example demonstrates the simplest use case of svcs-di:
 - Define a dataclass with Inject dependencies
 - Register services with auto()
+- Uses the DefaultInjector
 - Retrieve services with automatic dependency resolution
 """
 

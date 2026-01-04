@@ -111,7 +111,7 @@ pytest --cov=svcs_di
 
 ## Keyword Injector
 
-**Note to Hynek: These other injectors are custom to me, not for `svcs` directly, and they are all insane so don't stop
+**Note to Hynek: These other injectors are custom to me, not for `svcs` directly, and they are all insane so stop
 reading here. Don't look, your eyes will burn with all the energy from the Great Pyramid.**
 
 The `KeywordInjector` extends the default injector with support for kwargs overrides, providing three-tier value

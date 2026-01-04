@@ -11,7 +11,7 @@ Tests cover:
 from dataclasses import dataclass
 from typing import Protocol
 
-import svcs
+from svcs import Container, Registry
 
 from svcs_di.auto import Inject
 from svcs_di.injectors.decorators import injectable
@@ -51,11 +51,11 @@ def test_for_parameter_registers_to_service_locator():
     class ConcreteService:
         value: int = 42
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    # Should be registered to ServiceLocator
-    container = svcs.Container(registry)
+    # Should be registered to ServiceLocator because we have a for_ parameter
+    container = Container(registry)
     locator = container.get(ServiceLocator)
     impl = locator.get_implementation(BaseService, resource=None)
     assert impl is ConcreteService
@@ -72,10 +72,10 @@ def test_for_without_resource_uses_default():
     class DefaultGreeting:
         message: str = "Hello"
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     # Should match as default (no resource)
@@ -104,10 +104,10 @@ def test_multiple_implementations_same_service_type():
     class EmployeeGreeting:
         salutation: str = "Hey"
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     # All three should be registered
@@ -148,10 +148,10 @@ def test_for_with_protocol():
         def greet(self, name: str) -> str:
             return f"{self.salutation}, {name}!"
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     # Both should implement protocol
@@ -185,10 +185,10 @@ def test_resource_precedence_exact_match():
     class CustomerService:
         name: str = "customer"
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     # Exact match wins
@@ -212,10 +212,10 @@ def test_resource_precedence_subclass_match():
     class RequestService:
         name: str = "request"
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     # CustomerContext is subclass of RequestContext
@@ -240,10 +240,10 @@ def test_resource_precedence_default_fallback():
     class AdminService:
         name: str = "admin"
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     # CustomerContext doesn't match AdminContext
@@ -287,12 +287,12 @@ def test_for_with_hopscotch_injector():
         def welcome(self, name: str) -> str:
             return self.greeting.greet(name)  # type: ignore[attr-defined]
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
     # Test with CustomerContext
     registry.register_value(RequestContext, CustomerContext())
-    container = svcs.Container(registry)
+    container = Container(registry)
     injector = HopscotchInjector(container, resource=RequestContext)
 
     service = injector(WelcomeService)
@@ -331,12 +331,12 @@ def test_for_with_hopscotch_injector_fallback():
         def welcome(self, name: str) -> str:
             return self.greeting.greet(name)  # type: ignore[attr-defined]
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
     # Test with CustomerContext (no match, should use default)
     registry.register_value(RequestContext, CustomerContext())
-    container = svcs.Container(registry)
+    container = Container(registry)
     injector = HopscotchInjector(container, resource=RequestContext)
 
     service = injector(WelcomeService)
@@ -372,10 +372,10 @@ def test_mixed_for_and_non_for_services():
         greeting: Inject[Greeting]
         db: Inject[Database]
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
 
     # Database should be in registry directly
     db = container.get(Database)
@@ -406,10 +406,10 @@ def test_same_class_different_service_types():
     class ImplB:
         value: int = 2
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     impl_a = locator.get_implementation(ServiceA, resource=None)
@@ -459,12 +459,12 @@ def test_for_with_nested_dependencies():
         def fetch(self) -> str:
             return self.repo.query()  # type: ignore[attr-defined]
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
     # Test with CustomerContext
     registry.register_value(RequestContext, CustomerContext())
-    container = svcs.Container(registry)
+    container = Container(registry)
     injector = HopscotchInjector(container, resource=RequestContext)
 
     service = injector(Service)
@@ -508,12 +508,12 @@ def test_for_with_multiple_injectable_fields():
             greeting = f"{self.greeter.salutation}, {name}!"  # type: ignore[attr-defined]
             return self.formatter.format(greeting)  # type: ignore[attr-defined]
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
     # Test with CustomerContext
     registry.register_value(RequestContext, CustomerContext())
-    container = svcs.Container(registry)
+    container = Container(registry)
     injector = HopscotchInjector(container, resource=RequestContext)
 
     service = injector(MessageService)
@@ -541,10 +541,10 @@ def test_no_implementation_found_returns_none():
     class ServiceImpl:
         value: int = 1
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     locator = container.get(ServiceLocator)
 
     # Should return None (no implementation found for UnregisteredService)
@@ -565,10 +565,10 @@ def test_for_none_behaves_like_no_for():
     class ServiceB:
         value: int = 2
 
-    registry = svcs.Registry()
+    registry = Registry()
     scan(registry, locals_dict=locals())
 
-    container = svcs.Container(registry)
+    container = Container(registry)
 
     # Both should be registered directly to registry
     service_a = container.get(ServiceA)

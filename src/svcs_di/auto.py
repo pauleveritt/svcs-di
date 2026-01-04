@@ -52,7 +52,7 @@ type AsyncSvcsFactory[T] = Callable[..., Awaitable[T]]
 class Injector(Protocol):
     """Protocol for dependency injector that constructs instances with resolved dependencies."""
 
-    def __call__[T](self, target: type[T]) -> T:
+    def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """Construct an instance of target with dependencies resolved."""
         ...
 
@@ -60,7 +60,7 @@ class Injector(Protocol):
 class AsyncInjector(Protocol):
     """Protocol for async dependency injector."""
 
-    async def __call__[T](self, target: type[T]) -> T:
+    async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """Construct an instance of target with async dependencies resolved."""
         ...
 
@@ -79,7 +79,7 @@ class DefaultInjector:
 
     container: svcs.Container
 
-    def __call__[T](self, target: type[T]) -> T:
+    def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """Inject dependencies and construct target instance."""
         field_infos = get_field_infos(target)
 
@@ -106,7 +106,7 @@ class DefaultAsyncInjector:
 
     container: svcs.Container
 
-    async def __call__[T](self, target: type[T]) -> T:
+    async def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """Async inject dependencies and construct target instance."""
         field_infos = get_field_infos(target)
 
@@ -453,7 +453,7 @@ def auto[T](target: type[T]) -> SvcsFactory[T]:
     def factory(svcs_container: svcs.Container, **kwargs: object) -> T:
         """Factory function that resolves dependencies and constructs target."""
         try:
-            injector = svcs_container.get(DefaultInjector)
+            injector = svcs_container.get(Injector)
         except svcs.exceptions.ServiceNotFoundError:
             injector = DefaultInjector(container=svcs_container)
 
@@ -484,17 +484,3 @@ def auto_async[T](target: type[T]) -> AsyncSvcsFactory[T]:
         return await injector(target)
 
     return async_factory
-
-
-__all__ = [
-    "TypeHintResolutionError",
-    "Inject",
-    "Injector",
-    "AsyncInjector",
-    "DefaultInjector",
-    "DefaultAsyncInjector",
-    "auto",
-    "auto_async",
-    "FieldInfo",
-    "get_field_infos",
-]

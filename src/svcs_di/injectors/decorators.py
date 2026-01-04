@@ -28,8 +28,6 @@ import inspect
 from pathlib import PurePath
 from typing import Callable, Optional, overload
 
-__all__ = ["injectable"]
-
 
 def _mark_injectable(
     target: type,

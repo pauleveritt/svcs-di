@@ -9,9 +9,10 @@ This example demonstrates implementing a custom injector:
 import dataclasses
 from dataclasses import dataclass
 
-import svcs
+from svcs import Container, Registry
 
-from svcs_di import DefaultInjector, Inject, auto
+from svcs_di import Injector, Inject, auto
+from svcs_di.auto import DefaultInjector
 
 
 @dataclass
@@ -34,7 +35,7 @@ class Service:
 class LoggingInjector:
     """Custom injector that logs all dependency injections."""
 
-    container: svcs.Container
+    container: Container
 
     def __call__(self, target):
         """Injector that logs before and after injection."""
@@ -52,7 +53,7 @@ class LoggingInjector:
 class ValidatingInjector:
     """Custom injector that validates field values after construction."""
 
-    container: svcs.Container
+    container: Container
 
     def __call__(self, target):
         """Injector that validates timeout is positive."""
@@ -73,20 +74,20 @@ def main():
     print("Example 1: Logging Injector")
     print("=" * 50)
 
-    def logging_injector_factory(container: svcs.Container) -> LoggingInjector:
+    def logging_injector_factory(container: Container) -> LoggingInjector:
         return LoggingInjector(container=container)
 
-    registry = svcs.Registry()
+    registry = Registry()
 
     # Register custom logging injector
-    registry.register_factory(DefaultInjector, logging_injector_factory)
+    registry.register_factory(Injector, logging_injector_factory)
 
     # Register services
     registry.register_factory(Database, auto(Database))
     registry.register_factory(Service, auto(Service))
 
     # Get service - custom injector will log
-    container = svcs.Container(registry)
+    container = Container(registry)
     service = container.get(Service)
     print(f"Service timeout: {service.timeout}")
     print()
@@ -96,14 +97,14 @@ def main():
     print("=" * 50)
 
     def validating_injector_factory(
-        container: svcs.Container,
+        container: Container,
     ) -> ValidatingInjector:
         return ValidatingInjector(container=container)
 
-    registry2 = svcs.Registry()
+    registry2 = Registry()
 
     # Register custom validating injector
-    registry2.register_factory(DefaultInjector, validating_injector_factory)
+    registry2.register_factory(Injector, validating_injector_factory)
 
     # Register services
     registry2.register_value(Database, Database())
@@ -111,7 +112,7 @@ def main():
     # This will work (valid timeout with default)
     registry2.register_factory(Service, auto(Service))
 
-    container2 = svcs.Container(registry2)
+    container2 = Container(registry2)
     service2 = container2.get(Service)
     print(f"Valid service created with timeout: {service2.timeout}")
 
@@ -124,12 +125,12 @@ def main():
         db: Inject[Database]
         timeout: int = -10  # Invalid!
 
-    registry3 = svcs.Registry()
-    registry3.register_factory(DefaultInjector, validating_injector_factory)
+    registry3 = Registry()
+    registry3.register_factory(Injector, validating_injector_factory)
     registry3.register_value(Database, Database())
     registry3.register_factory(InvalidService, auto(InvalidService))
 
-    container3 = svcs.Container(registry3)
+    container3 = Container(registry3)
     try:
         service3 = container3.get(InvalidService)
     except ValueError as e:

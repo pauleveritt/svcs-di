@@ -8,12 +8,10 @@ from typing import Protocol, runtime_checkable
 import pytest
 import svcs
 
+from svcs_di import DefaultInjector, Inject, Injector, auto, auto_async
 from svcs_di.auto import (
-    Inject,
-    auto,
-    auto_async,
-    _create_field_info,
     FieldInfo,
+    _create_field_info,
 )
 
 
@@ -163,7 +161,6 @@ async def test_auto_factory_async():
 
 def test_auto_factory_custom_injector():
     """auto() uses custom injector if registered in container."""
-    from svcs_di import DefaultInjector
 
     # Create a custom injector that adds a prefix to string fields
     @dataclasses.dataclass
@@ -190,7 +187,7 @@ def test_auto_factory_custom_injector():
     registry = svcs.Registry()
 
     # Register custom injector
-    registry.register_factory(DefaultInjector, custom_injector_factory)
+    registry.register_factory(Injector, custom_injector_factory)
 
     # Register dependencies
     registry.register_value(Database, Database())
@@ -208,7 +205,6 @@ def test_auto_factory_custom_injector():
 
 def test_get_injector_from_container():
     """Can retrieve the injector directly from the container and use it."""
-    from svcs_di import DefaultInjector
 
     @dataclass
     class SimpleService:
@@ -220,11 +216,11 @@ def test_get_injector_from_container():
     registry = svcs.Registry()
 
     # Register the default injector
-    registry.register_factory(DefaultInjector, injector_factory)
+    registry.register_factory(Injector, injector_factory)
 
     # Get the injector from container
     container = svcs.Container(registry)
-    injector = container.get(DefaultInjector)
+    injector = container.get(Injector)
 
     # Use the injector directly - kwargs are ignored in DefaultInjector
     service = injector(SimpleService)

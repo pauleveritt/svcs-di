@@ -11,10 +11,9 @@ Use this when you need runtime parameter overrides, especially useful for testin
 
 from dataclasses import dataclass
 
-import svcs
+from svcs import Container, Registry
 
-from svcs_di import Inject
-from svcs_di.injectors import KeywordInjector
+from svcs_di import Inject, Injector, KeywordInjector, auto
 
 
 @dataclass
@@ -36,13 +35,13 @@ class Service:
 
 def main():
     """Demonstrate KeywordInjector's three-tier precedence."""
-    registry = svcs.Registry()
+    registry = Registry()
 
     # Register production database
     prod_db = Database(host="prod.example.com", port=5433)
     registry.register_value(Database, prod_db)
 
-    container = svcs.Container(registry)
+    container = Container(registry)
     injector = KeywordInjector(container=container)
 
     # Case 1: Normal usage - use container lookup + defaults (Tier 2 & 3)
@@ -75,23 +74,22 @@ def main():
 
     # Case 4: Use KeywordInjector as custom injector in auto() pattern
     print("Case 4: Register KeywordInjector as custom injector")
-    from svcs_di import DefaultInjector, auto
 
-    registry2 = svcs.Registry()
+    registry2 = Registry()
 
     # Register KeywordInjector as the default injector
     # Use proper factory function signature that svcs recognizes
-    def keyword_injector_factory(svcs_container: svcs.Container) -> KeywordInjector:
+    def keyword_injector_factory(svcs_container: Container) -> KeywordInjector:
         return KeywordInjector(container=svcs_container)
 
-    registry2.register_factory(DefaultInjector, keyword_injector_factory)
+    registry2.register_factory(Injector, keyword_injector_factory)
 
     # Register dependencies
     registry2.register_value(Database, prod_db)
     registry2.register_factory(Service, auto(Service))
 
     # Now auto() will use KeywordInjector for kwargs support
-    container2 = svcs.Container(registry2)
+    container2 = Container(registry2)
 
     # Get service through auto() factory (which uses our KeywordInjector)
     service4 = container2.get(Service)

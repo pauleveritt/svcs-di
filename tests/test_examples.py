@@ -10,8 +10,7 @@ from typing import Protocol
 import pytest
 import svcs
 
-from svcs_di import Inject, auto, auto_async, DefaultInjector
-
+from svcs_di import DefaultInjector, Inject, Injector, KeywordInjector, auto, auto_async
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 
@@ -224,7 +223,6 @@ def test_kwargs_override_with_keyword_injector():
     This test demonstrates migrating from DefaultInjector to KeywordInjector
     for kwargs override support.
     """
-    from svcs_di.injectors import KeywordInjector
 
     @dataclass
     class Database:
@@ -392,7 +390,7 @@ def test_custom_injector_exception_handling():
     def strict_injector_factory(svcs_container: svcs.Container) -> StrictInjector:
         return StrictInjector(container=svcs_container)
 
-    registry.register_factory(DefaultInjector, strict_injector_factory)
+    registry.register_factory(Injector, strict_injector_factory)
     registry.register_factory(AllowedService, auto(AllowedService))
     registry.register_factory(ForbiddenService, auto(ForbiddenService))
 

@@ -152,6 +152,7 @@ from typing import Any, Optional
 
 import svcs
 
+from svcs_di import DefaultInjector
 from svcs_di.auto import FieldInfo, Injector, get_field_infos
 
 log = logging.getLogger("svcs_di")
@@ -789,14 +790,14 @@ class HopscotchAsyncInjector:
 # ============================================================================
 
 
-def _create_injector_factory(target_class: type, injector_type: type[Injector]) -> Any:
+def _create_injector_factory(target_class: type) -> Any:
     """Create a factory function for a decorated class."""
 
     def factory(svcs_container: svcs.Container) -> Any:
         try:
-            injector = svcs_container.get(injector_type)
+            injector = svcs_container.get(Injector)
         except svcs.exceptions.ServiceNotFoundError:
-            injector = injector_type(container=svcs_container)
+            injector = DefaultInjector(container=svcs_container)
         return injector(target_class)
 
     return factory
@@ -814,7 +815,6 @@ def _get_or_create_locator(registry: svcs.Registry) -> ServiceLocator:
 def _register_decorated_items(
     registry: svcs.Registry,
     decorated_items: list[tuple[type, dict[str, Any]]],
-    injector_type: type[Injector],
 ) -> None:
     """Register all decorated items to registry and/or locator."""
     locator = _get_or_create_locator(registry)
@@ -842,7 +842,7 @@ def _register_decorated_items(
             locator_modified = True
         else:
             # Direct registry registration (no resource, no location, no service type override)
-            factory = _create_injector_factory(decorated_class, injector_type)
+            factory = _create_injector_factory(decorated_class)
             registry.register_factory(decorated_class, factory)
 
     if locator_modified:
@@ -1002,7 +1002,6 @@ def _collect_decorated_items(
 def scan(
     registry: svcs.Registry,
     *packages: str | ModuleType | None,
-    injector_type: type[Injector] | None = None,
     locals_dict: dict[str, Any] | None = None,
 ) -> svcs.Registry:
     """
@@ -1020,7 +1019,6 @@ def scan(
                    - ModuleType objects: myapp.services
                    - None/empty: Auto-detects caller's package
                    - Multiple: scan(registry, "app.models", "app.views")
-        injector_type: Injector type for service construction (defaults to DefaultInjector)
         locals_dict: Dictionary of local variables to scan (useful for testing)
 
     Returns:
@@ -1033,15 +1031,10 @@ def scan(
 
     See examples/scanning/ for complete examples.
     """
-    if injector_type is None:
-        from svcs_di.auto import DefaultInjector
-
-        injector_type = DefaultInjector
-
     # Handle locals_dict scanning for testing
     if locals_dict is not None:
         decorated_items = _scan_locals(locals_dict)
-        _register_decorated_items(registry, decorated_items, injector_type)
+        _register_decorated_items(registry, decorated_items)
         return registry
 
     # Auto-detect caller's package if not specified
@@ -1058,5 +1051,5 @@ def scan(
     modules_to_scan = _collect_modules_to_scan(packages)
     discovered_modules = _discover_all_modules(modules_to_scan)
     decorated_items = _collect_decorated_items(discovered_modules)
-    _register_decorated_items(registry, decorated_items, injector_type)
+    _register_decorated_items(registry, decorated_items)
     return registry

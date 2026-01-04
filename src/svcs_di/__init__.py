@@ -22,11 +22,10 @@ from svcs_di.auto import (
     DefaultInjector,
     Inject,
     Injector,
-    TypeHintResolutionError,  # type: ignore[attr-defined]
     auto,
     auto_async,
 )
-from svcs_di.injectors import KeywordAsyncInjector, KeywordInjector
+from svcs_di.injectors.keyword import KeywordAsyncInjector, KeywordInjector
 
 __all__ = [
     "auto",
@@ -38,5 +37,4 @@ __all__ = [
     "DefaultAsyncInjector",
     "KeywordInjector",
     "KeywordAsyncInjector",
-    "TypeHintResolutionError",
 ]

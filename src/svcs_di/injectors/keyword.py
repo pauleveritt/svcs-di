@@ -7,7 +7,7 @@ kwargs override functionality that was extracted from DefaultInjector.
 Helper functions are imported from svcs_di.auto to maintain a standalone DefaultInjector.
 """
 
-import dataclasses
+from dataclasses import dataclass
 from typing import Any
 
 import svcs
@@ -19,7 +19,7 @@ from svcs_di.auto import (
 )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class KeywordInjector:
     """
     Dependency injector with kwargs override support.
@@ -83,7 +83,7 @@ class KeywordInjector:
             else:
                 return True, default_val
 
-        return (False, None)
+        return False, None
 
     def __call__[T](self, target: type[T], **kwargs: Any) -> T:
         """
@@ -112,7 +112,7 @@ class KeywordInjector:
         return target(**resolved_kwargs)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class KeywordAsyncInjector:
     """
     Async dependency injector with kwargs override support.

@@ -1,23 +1,24 @@
 """Tests for KeywordInjector and KeywordAsyncInjector."""
 
+import asyncio
 from dataclasses import dataclass
 from typing import Protocol
 
 import pytest
-import svcs
+from svcs import Container, Registry
 
-from svcs_di import Inject
+from svcs_di import Inject, Injector, KeywordAsyncInjector, KeywordInjector
 
 
 # Test fixtures
-class GreeterProtocol(Protocol):
+class Greeter(Protocol):
     """A protocol for testing protocol-based injection."""
 
     def greet(self, name: str) -> str: ...
 
 
-class ConcreteGreeter:
-    """A concrete implementation of GreeterProtocol."""
+class DefaultGreeter:
+    """A concrete implementation of Greeter."""
 
     def greet(self, name: str) -> str:
         return f"Hello, {name}!"
@@ -39,21 +40,34 @@ class DBService:
     timeout: int = 30
 
 
+@pytest.fixture
+def registry() -> Registry:
+    """Create a registry with a database."""
+    registry = Registry()
+    registry.register_factory(Injector, KeywordInjector)
+    registry.register_factory(Database, Database)
+    return registry
+
+
+@pytest.fixture
+def container(registry: Registry) -> Container:
+    """Create a container from the registry."""
+    return Container(registry)
+
+
+@pytest.fixture
+def injector(container: Container) -> KeywordInjector:
+    """Get the KeywordInjector from the container."""
+    _injector = container.get(Injector)
+    assert isinstance(_injector, KeywordInjector)
+    return _injector
+
+
 # Tests for KeywordInjector
-def test_keyword_injector_kwarg_precedence():
+def test_keyword_injector_kwarg_precedence(injector: KeywordInjector):
     """Kwargs override everything, including injectable parameters."""
-    from svcs_di.injectors import KeywordInjector
 
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    # Register a database
-    registry.register_value(Database, Database(host="prod", port=5433))
-
-    # Get the injector
-    injector = KeywordInjector(container=container)
-
-    # But override it with kwargs
+    # Create DBService with injection but with kwargs
     custom_db = Database(host="test", port=1234)
     instance = injector(DBService, db=custom_db)
 
@@ -63,17 +77,8 @@ def test_keyword_injector_kwarg_precedence():
     assert instance.db.port == 1234
 
 
-def test_keyword_injector_kwargs_override_defaults():
+def test_keyword_injector_kwargs_override_defaults(injector: KeywordInjector):
     """Kwargs override default values for non-injectable parameters."""
-    from svcs_di.injectors import KeywordInjector
-
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    registry.register_value(Database, Database())
-
-    # Get the injector
-    injector = KeywordInjector(container=container)
 
     # Override the default timeout
     instance = injector(DBService, timeout=60)
@@ -81,36 +86,22 @@ def test_keyword_injector_kwargs_override_defaults():
     assert instance.timeout == 60
 
 
-def test_keyword_injector_validates_kwargs():
+def test_keyword_injector_validates_kwargs(injector: KeywordInjector):
     """Unknown kwargs raise ValueError."""
-    from svcs_di.injectors import KeywordInjector
-
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    registry.register_value(Database, Database())
-
-    # Get the injector
-    injector = KeywordInjector(container=container)
 
     # Try to pass an unknown kwarg
     with pytest.raises(ValueError, match="unknown_param"):
         injector(DBService, unknown_param="bad")
 
 
-def test_keyword_injector_container_resolution():
+def test_keyword_injector_container_resolution(
+    registry: Registry, injector: KeywordInjector
+):
     """Inject parameters are resolved from container when no kwargs provided."""
-    from svcs_di.injectors import KeywordInjector
 
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    # Register a database
+    # Register a custom database to override the default registration
     db = Database(host="prod", port=5433)
     registry.register_value(Database, db)
-
-    # Get the injector
-    injector = KeywordInjector(container=container)
 
     # Inject without kwargs
     instance = injector(DBService)
@@ -121,23 +112,18 @@ def test_keyword_injector_container_resolution():
     assert instance.db.port == 5433
 
 
-def test_keyword_injector_protocol_injection():
+def test_keyword_injector_protocol_injection(
+    registry: Registry, injector: KeywordInjector
+):
     """Protocol types are resolved using get_abstract()."""
-    from svcs_di.injectors import KeywordInjector
 
     @dataclass
     class ServiceWithProtocol:
-        greeter: Inject[GreeterProtocol]
-
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
+        greeter: Inject[Greeter]
 
     # Register the protocol implementation
-    greeter = ConcreteGreeter()
-    registry.register_value(GreeterProtocol, greeter)
-
-    # Get the injector
-    injector = KeywordInjector(container=container)
+    greeter = DefaultGreeter()
+    registry.register_value(Greeter, greeter)
 
     # Inject
     instance = injector(ServiceWithProtocol)
@@ -147,18 +133,8 @@ def test_keyword_injector_protocol_injection():
     assert instance.greeter.greet("World") == "Hello, World!"
 
 
-def test_keyword_injector_default_fallback():
+def test_keyword_injector_default_fallback(injector: KeywordInjector):
     """Non-injectable parameters use default values when not overridden."""
-    from svcs_di.injectors import KeywordInjector
-
-    registry = svcs.Registry()
-    container = svcs.Container(registry)
-
-    # Register a database
-    registry.register_value(Database, Database())
-
-    # Get the injector
-    injector = KeywordInjector(container=container)
 
     # Create instance - timeout should use default
     instance = injector(DBService)
@@ -168,8 +144,6 @@ def test_keyword_injector_default_fallback():
 
 async def test_keyword_async_injector_with_mixed_dependencies():
     """Test async injector can handle both sync and async dependencies."""
-    import asyncio
-    from svcs_di.injectors import KeywordAsyncInjector
 
     @dataclass
     class SyncDep:
@@ -184,7 +158,7 @@ async def test_keyword_async_injector_with_mixed_dependencies():
         sync_dep: Inject[SyncDep]
         async_dep: Inject[AsyncDep]
 
-    registry = svcs.Registry()
+    registry = Registry()
 
     # Register sync dependency as value
     registry.register_value(SyncDep, SyncDep())
@@ -196,7 +170,7 @@ async def test_keyword_async_injector_with_mixed_dependencies():
 
     registry.register_factory(AsyncDep, async_factory)
 
-    async with svcs.Container(registry) as container:
+    async with Container(registry) as container:
         # Get async injector
         injector = KeywordAsyncInjector(container=container)
 
@@ -211,17 +185,16 @@ async def test_keyword_async_injector_with_mixed_dependencies():
 
 async def test_keyword_async_injector_kwargs_override():
     """Test async injector respects kwargs override."""
-    from svcs_di.injectors import KeywordAsyncInjector
 
     @dataclass
     class SimpleService:
         value: Inject[Database]
         timeout: int = 10
 
-    registry = svcs.Registry()
+    registry = Registry()
     registry.register_value(Database, Database(host="prod", port=5432))
 
-    async with svcs.Container(registry) as container:
+    async with Container(registry) as container:
         injector = KeywordAsyncInjector(container=container)
 
         # Override both injectable and default

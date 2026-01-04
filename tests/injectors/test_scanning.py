@@ -6,7 +6,7 @@ from pathlib import Path
 
 import svcs
 
-from svcs_di.auto import DefaultInjector, Inject
+from svcs_di import DefaultInjector, Inject, Injector
 from svcs_di.injectors.locator import HopscotchInjector, ServiceLocator, scan
 
 # Add test_fixtures to path so we can import test modules
@@ -102,20 +102,6 @@ def test_scan_handles_empty_package_gracefully():
     result = scan(registry, "tests.test_fixtures.scanning_test_package.no_decorators")
 
     # Should not raise an error
-    assert result is registry
-
-
-def test_scan_with_custom_injector_type():
-    """Test scan() accepts custom injector_type parameter."""
-    registry = svcs.Registry()
-
-    # Should accept injector_type parameter
-    result = scan(
-        registry,
-        "tests.test_fixtures.scanning_test_package.service_a",
-        injector_type=DefaultInjector,
-    )
-
     assert result is registry
 
 
@@ -376,10 +362,10 @@ def test_scan_with_hopscotch_injector_type():
 
     # Scan with HopscotchInjector
     registry = svcs.Registry()
+    registry.register_factory(Injector, HopscotchInjector)
     scan(
         registry,
         "tests.test_fixtures.scanning_test_package.service_a",
-        injector_type=HopscotchInjector,
     )
 
     # Create container

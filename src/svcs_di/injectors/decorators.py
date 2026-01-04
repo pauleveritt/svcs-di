@@ -26,14 +26,14 @@ See examples/scanning/ for complete examples.
 
 import inspect
 from pathlib import PurePath
-from typing import Callable, Optional, overload
+from typing import Callable, overload
 
 
 def _mark_injectable(
     target: type,
-    for_: Optional[type] = None,
-    resource: Optional[type] = None,
-    location: Optional[PurePath] = None,
+    for_: type | None = None,
+    resource: type | None = None,
+    location: PurePath | None = None,
 ) -> type:
     """
     Store metadata on target class for scan() to discover later.
@@ -66,18 +66,18 @@ class _InjectDecorator:
     def __call__(
         self,
         *,
-        for_: Optional[type] = None,
-        resource: Optional[type] = None,
-        location: Optional[PurePath] = None,
+        for_: type | None = None,
+        resource: type | None = None,
+        location: PurePath | None = None,
     ) -> Callable[[type], type]: ...
 
     def __call__(
         self,
         target: type | None = None,
         *,
-        for_: Optional[type] = None,
-        resource: Optional[type] = None,
-        location: Optional[PurePath] = None,
+        for_: type | None = None,
+        resource: type | None = None,
+        location: PurePath | None = None,
     ) -> type | Callable[[type], type]:
         # Bare decorator: @injectable
         if target is not None:

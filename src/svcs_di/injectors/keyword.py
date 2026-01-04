@@ -20,6 +20,67 @@ from svcs_di.auto import (
     InjectionTarget,
     get_field_infos,
 )
+from svcs_di.injectors._helpers import resolve_default_value, validate_kwargs
+
+
+def _resolve_from_container_sync(
+    field_info: FieldInfo, container: svcs.Container
+) -> tuple[bool, Any]:
+    """
+    Resolve an injectable field from the container (sync version).
+
+    Args:
+        field_info: Information about the field to resolve
+        container: The svcs container to resolve from
+
+    Returns:
+        tuple[bool, Any]: (has_value, value) where has_value indicates if resolved
+
+    Raises:
+        TypeError: If inner_type is None
+    """
+    inner_type = field_info.inner_type
+    if inner_type is None:
+        raise TypeError(f"Inject field '{field_info.name}' has no inner type")
+
+    # Container injection - return the container itself
+    if inner_type is svcs.Container:
+        return True, container
+
+    # Protocol vs concrete type
+    if field_info.is_protocol:
+        return True, container.get_abstract(inner_type)
+    return True, container.get(inner_type)
+
+
+async def _resolve_from_container_async(
+    field_info: FieldInfo, container: svcs.Container
+) -> tuple[bool, Any]:
+    """
+    Resolve an injectable field from the container (async version).
+
+    Args:
+        field_info: Information about the field to resolve
+        container: The svcs container to resolve from
+
+    Returns:
+        tuple[bool, Any]: (has_value, value) where has_value indicates if resolved
+
+    Raises:
+        TypeError: If inner_type is None
+    """
+    inner_type = field_info.inner_type
+    if inner_type is None:
+        raise TypeError(f"Inject field '{field_info.name}' has no inner type")
+
+    # Container injection - return the container itself
+    if inner_type is svcs.Container:
+        return True, container
+
+    # Protocol vs concrete type (async)
+    if field_info.is_protocol:
+        return True, await container.aget_abstract(inner_type)
+    return True, await container.aget(inner_type)
 
 
 @dataclass(frozen=True)
@@ -38,19 +99,6 @@ class KeywordInjector:
 
     container: svcs.Container
 
-    def _validate_kwargs(
-        self, target: InjectionTarget | AsyncInjectionTarget, field_infos: list[FieldInfo], kwargs: dict[str, Any]
-    ) -> None:
-        """Validate that all kwargs match actual field names."""
-        valid_field_names = {f.name for f in field_infos}
-        target_name = getattr(target, "__name__", repr(target))
-        for kwarg_name in kwargs:
-            if kwarg_name not in valid_field_names:
-                raise ValueError(
-                    f"Unknown parameter '{kwarg_name}' for {target_name}. "
-                    f"Valid parameters: {', '.join(sorted(valid_field_names))}"
-                )
-
     def _resolve_field_value_sync(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
     ) -> tuple[bool, Any]:
@@ -60,32 +108,17 @@ class KeywordInjector:
         Returns:
             tuple[bool, Any]: (has_value, value) where has_value indicates if a value was resolved
         """
-        field_name = field_info.name
-
         # Tier 1: kwargs (highest priority)
-        if field_name in kwargs:
-            return (True, kwargs[field_name])
+        if field_info.name in kwargs:
+            return (True, kwargs[field_info.name])
 
         # Tier 2: Inject from container
         if field_info.is_injectable:
-            match field_info.inner_type:
-                case None:
-                    raise TypeError(f"Inject field '{field_name}' has no inner type")
-                case inner_type if inner_type is svcs.Container:
-                    # Container injection - inject self.container
-                    return True, self.container
-                case inner_type if field_info.is_protocol:
-                    return True, self.container.get_abstract(inner_type)
-                case inner_type:
-                    return True, self.container.get(inner_type)
+            return _resolve_from_container_sync(field_info, self.container)
 
         # Tier 3: default value
         if field_info.has_default:
-            default_val = field_info.default_value
-            if callable(default_val) and hasattr(default_val, "__self__"):
-                return True, default_val()
-            else:
-                return True, default_val
+            return True, resolve_default_value(field_info.default_value)
 
         return False, None
 
@@ -105,7 +138,7 @@ class KeywordInjector:
             TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)
-        self._validate_kwargs(target, field_infos, kwargs)
+        validate_kwargs(target, field_infos, kwargs)
 
         resolved_kwargs: dict[str, Any] = {}
         for field_info in field_infos:
@@ -122,8 +155,7 @@ class KeywordAsyncInjector:
     Async dependency injector with kwargs override support.
 
     Like KeywordInjector but uses async container methods (aget, aget_abstract)
-    for resolving Inject[T] dependencies. Wraps sync logic where possible
-    to avoid code duplication.
+    for resolving Inject[T] dependencies.
 
     Implements the same three-tier precedence as KeywordInjector:
     1. kwargs passed to injector (highest priority)
@@ -132,19 +164,6 @@ class KeywordAsyncInjector:
     """
 
     container: svcs.Container
-
-    def _validate_kwargs(
-        self, target: InjectionTarget | AsyncInjectionTarget, field_infos: list[FieldInfo], kwargs: dict[str, Any]
-    ) -> None:
-        """Validate that all kwargs match actual field names."""
-        valid_field_names = {f.name for f in field_infos}
-        target_name = getattr(target, "__name__", repr(target))
-        for kwarg_name in kwargs:
-            if kwarg_name not in valid_field_names:
-                raise ValueError(
-                    f"Unknown parameter '{kwarg_name}' for {target_name}. "
-                    f"Valid parameters: {', '.join(sorted(valid_field_names))}"
-                )
 
     async def _resolve_field_value_async(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
@@ -155,32 +174,17 @@ class KeywordAsyncInjector:
         Returns:
             tuple[bool, Any]: (has_value, value) where has_value indicates if a value was resolved
         """
-        field_name = field_info.name
-
         # Tier 1: kwargs (highest priority)
-        if field_name in kwargs:
-            return (True, kwargs[field_name])
+        if field_info.name in kwargs:
+            return (True, kwargs[field_info.name])
 
         # Tier 2: Inject from container (async)
         if field_info.is_injectable:
-            match field_info.inner_type:
-                case None:
-                    raise TypeError(f"Inject field '{field_name}' has no inner type")
-                case inner_type if inner_type is svcs.Container:
-                    # Container injection - inject self.container
-                    return True, self.container
-                case inner_type if field_info.is_protocol:
-                    return True, await self.container.aget_abstract(inner_type)
-                case inner_type:
-                    return True, await self.container.aget(inner_type)
+            return await _resolve_from_container_async(field_info, self.container)
 
         # Tier 3: default value
         if field_info.has_default:
-            default_val = field_info.default_value
-            if callable(default_val) and hasattr(default_val, "__self__"):
-                return True, default_val()
-            else:
-                return True, default_val
+            return True, resolve_default_value(field_info.default_value)
 
         return (False, None)
 
@@ -200,7 +204,7 @@ class KeywordAsyncInjector:
             TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)
-        self._validate_kwargs(target, field_infos, kwargs)
+        validate_kwargs(target, field_infos, kwargs)
 
         resolved_kwargs: dict[str, Any] = {}
         for field_info in field_infos:

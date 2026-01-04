@@ -1,0 +1,74 @@
+"""
+Shared helper functions for injector implementations.
+
+This module contains common functionality used across multiple injector
+classes to reduce code duplication between sync/async variants.
+"""
+
+from typing import Any
+
+from svcs_di.auto import FieldInfo
+
+
+def validate_kwargs(
+    target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any], allow_children: bool = False
+) -> None:
+    """
+    Validate that all kwargs match actual field names.
+
+    Args:
+        target: The target class being constructed
+        field_infos: List of field information for the target
+        kwargs: The keyword arguments to validate
+        allow_children: If True, silently allow 'children' kwarg even if not a field
+                       (for template systems that always pass children)
+
+    Raises:
+        ValueError: If unknown kwargs are provided
+    """
+    valid_field_names = {f.name for f in field_infos}
+    for kwarg_name in kwargs:
+        # Special case: 'children' is allowed if allow_children=True
+        if allow_children and kwarg_name == "children":
+            continue
+        if kwarg_name not in valid_field_names:
+            raise ValueError(
+                f"Unknown parameter '{kwarg_name}' for {target.__name__}. "
+                f"Valid parameters: {', '.join(sorted(valid_field_names))}"
+            )
+
+
+def is_dataclass_default_factory(value: Any) -> bool:
+    """
+    Check if value is a bound method (e.g., dataclass default_factory).
+
+    Dataclass fields with default_factory store a bound method that needs
+    to be called to get the default value.
+
+    Args:
+        value: The value to check
+
+    Returns:
+        True if value is a callable bound method
+    """
+    return callable(value) and hasattr(value, "__self__")
+
+
+def resolve_default_value(default_value: Any) -> Any:
+    """
+    Resolve a default value, calling it if it's a default_factory.
+
+    Dataclass fields with default_factory are represented as either:
+    - Bound methods (when the field has a callable default_factory)
+    - Regular callables (including classes)
+
+    Args:
+        default_value: The default value or default_factory
+
+    Returns:
+        The resolved default value
+    """
+    # If it's callable (including bound methods and classes), call it
+    if callable(default_value):
+        return default_value()
+    return default_value

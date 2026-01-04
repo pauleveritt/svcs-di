@@ -51,6 +51,48 @@ type AsyncInjectionTarget[T] = type[T] | Callable[..., Awaitable[T]]
 # ============================================================================
 
 
+def _build_injected_kwargs_sync(
+    field_infos: list[FieldInfo], container: svcs.Container
+) -> dict[str, Any]:
+    """
+    Build resolved kwargs dictionary for dependency injection (sync version).
+
+    Args:
+        field_infos: List of field information to resolve
+        container: The svcs container to resolve dependencies from
+
+    Returns:
+        Dictionary of resolved kwargs ready to pass to target callable
+    """
+    resolved_kwargs: dict[str, Any] = {}
+    for field_info in field_infos:
+        has_value, value = _resolve_field_value(field_info, container)
+        if has_value:
+            resolved_kwargs[field_info.name] = value
+    return resolved_kwargs
+
+
+async def _build_injected_kwargs_async(
+    field_infos: list[FieldInfo], container: svcs.Container
+) -> dict[str, Any]:
+    """
+    Build resolved kwargs dictionary for dependency injection (async version).
+
+    Args:
+        field_infos: List of field information to resolve
+        container: The svcs container to resolve dependencies from
+
+    Returns:
+        Dictionary of resolved kwargs ready to pass to target callable
+    """
+    resolved_kwargs: dict[str, Any] = {}
+    for field_info in field_infos:
+        has_value, value = await _resolve_field_value_async(field_info, container)
+        if has_value:
+            resolved_kwargs[field_info.name] = value
+    return resolved_kwargs
+
+
 class Injector(Protocol):
     """Protocol for dependency injector that constructs instances with resolved dependencies."""
 
@@ -108,13 +150,7 @@ class DefaultInjector:
             Result of calling target with resolved dependencies
         """
         field_infos = get_field_infos(target)
-
-        resolved_kwargs: dict[str, Any] = {}
-        for field_info in field_infos:
-            has_value, value = _resolve_field_value(field_info, self.container)
-            if has_value:
-                resolved_kwargs[field_info.name] = value
-
+        resolved_kwargs = _build_injected_kwargs_sync(field_infos, self.container)
         return target(**resolved_kwargs)  # type: ignore[return-value]
 
 
@@ -143,14 +179,9 @@ class DefaultAsyncInjector:
             Result of calling target with resolved dependencies
         """
         field_infos = get_field_infos(target)
-
-        resolved_kwargs: dict[str, Any] = {}
-        for field_info in field_infos:
-            has_value, value = await _resolve_field_value_async(
-                field_info, self.container
-            )
-            if has_value:
-                resolved_kwargs[field_info.name] = value
+        resolved_kwargs = await _build_injected_kwargs_async(
+            field_infos, self.container
+        )
 
         result = target(**resolved_kwargs)
         # If target is an async callable, await the result
@@ -275,28 +306,44 @@ def get_field_infos(target: type | Callable) -> list[FieldInfo]:
         return _get_callable_field_infos(target)
 
 
-def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
-    """Extract field information from a dataclass."""
-    type_hints: dict[str, Any] = {}
+def _safe_get_type_hints(target: Any, context_name: str) -> dict[str, Any]:
+    """
+    Get type hints with unified error handling.
+
+    Args:
+        target: The target to get type hints from (class or callable)
+        context_name: Name to use in error messages (e.g., "dataclass Foo" or "callable bar")
+
+    Returns:
+        Dictionary of type hints
+
+    Raises:
+        TypeHintResolutionError: If type hints cannot be resolved
+    """
     try:
-        type_hints = get_type_hints(target)
+        return get_type_hints(target)
     except NameError as e:
         raise TypeHintResolutionError(
-            f"Cannot resolve type hints for dataclass {target.__name__!r}: "
+            f"Cannot resolve type hints for {context_name}: "
             f"undefined name in annotation. This typically means a forward reference "
             f"is not quoted or the imported type is missing. Original error: {e}"
         ) from e
     except AttributeError as e:
         raise TypeHintResolutionError(
-            f"Cannot resolve type hints for dataclass {target.__name__!r}: "
+            f"Cannot resolve type hints for {context_name}: "
             f"missing attribute. This typically means an annotation references an "
             f"attribute that doesn't exist. Original error: {e}"
         ) from e
     except TypeError as e:
         raise TypeHintResolutionError(
-            f"Cannot resolve type hints for dataclass {target.__name__!r}: "
+            f"Cannot resolve type hints for {context_name}: "
             f"type error in annotation. Original error: {e}"
         ) from e
+
+
+def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
+    """Extract field information from a dataclass."""
+    type_hints = _safe_get_type_hints(target, f"dataclass {target.__name__!r}")
 
     # dataclasses.fields() expects DataclassInstance, but we've already validated
     # target is a dataclass via is_dataclass() check. Type checkers can't infer this.
@@ -325,22 +372,35 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
     return field_infos
 
 
-def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
-    """Extract parameter information from a callable."""
-    callable_name = getattr(target, "__name__", repr(target))
-    sig = None
+def _get_safe_signature(target: Callable, callable_name: str) -> inspect.Signature | None:
+    """
+    Get signature for a callable with unified error handling.
+
+    Tries with eval_str=True first (to resolve string annotations), then falls back
+    to eval_str=False if forward references fail to resolve.
+
+    Args:
+        target: The callable to get signature from
+        callable_name: Name to use in error messages
+
+    Returns:
+        The signature object, or None if signature cannot be obtained
+
+    Raises:
+        TypeHintResolutionError: If signature cannot be obtained due to introspection issues
+    """
     try:
-        sig = inspect.signature(target, eval_str=True)
+        return inspect.signature(target, eval_str=True)
     except NameError:
         # Try without eval_str as forward references might not resolve
         try:
-            sig = inspect.signature(target)
-        except (ValueError, TypeError) as e2:
+            return inspect.signature(target)
+        except (ValueError, TypeError) as e:
             raise TypeHintResolutionError(
-                f"Cannot get signature for callable {callable_name!r}: {e2}. "
+                f"Cannot get signature for callable {callable_name!r}: {e}. "
                 f"This typically means the callable is a built-in or C extension "
                 f"without proper introspection support."
-            ) from e2
+            ) from e
     except (ValueError, TypeError) as e:
         raise TypeHintResolutionError(
             f"Cannot get signature for callable {callable_name!r}: {e}. "
@@ -348,29 +408,16 @@ def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
             f"without proper introspection support."
         ) from e
 
+
+def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
+    """Extract parameter information from a callable."""
+    callable_name = getattr(target, "__name__", repr(target))
+    sig = _get_safe_signature(target, callable_name)
+
     if sig is None:
         return []
 
-    type_hints: dict[str, Any] = {}
-    try:
-        type_hints = get_type_hints(target)
-    except NameError as e:
-        raise TypeHintResolutionError(
-            f"Cannot resolve type hints for callable {callable_name!r}: "
-            f"undefined name in annotation. This typically means a forward reference "
-            f"is not quoted or the imported type is missing. Original error: {e}"
-        ) from e
-    except AttributeError as e:
-        raise TypeHintResolutionError(
-            f"Cannot resolve type hints for callable {callable_name!r}: "
-            f"missing attribute. This typically means an annotation references an "
-            f"attribute that doesn't exist. Original error: {e}"
-        ) from e
-    except TypeError as e:
-        raise TypeHintResolutionError(
-            f"Cannot resolve type hints for callable {callable_name!r}: "
-            f"type error in annotation. Original error: {e}"
-        ) from e
+    type_hints = _safe_get_type_hints(target, f"callable {callable_name!r}")
 
     field_infos = []
     for param_name, param in sig.parameters.items():

@@ -521,6 +521,9 @@ class HopscotchInjector:
     When resolving Inject[T] fields, it first tries ServiceLocator.get_implementation()
     with resource and location obtained from container. If no locator or no matching implementation is found,
     falls back to standard container.get(T) or container.get_abstract(T) behavior.
+
+    Special handling: The 'children' kwarg is silently ignored if not a valid field, to support
+    template rendering systems (like tdom) that always pass children even when not needed.
     """
 
     container: svcs.Container
@@ -531,9 +534,12 @@ class HopscotchInjector:
     def _validate_kwargs(
         self, target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any]
     ) -> None:
-        """Validate that all kwargs match actual field names."""
+        """Validate that all kwargs match actual field names, except 'children' which is ignored."""
         valid_field_names = {f.name for f in field_infos}
         for kwarg_name in kwargs:
+            # Special case: 'children' is allowed even if not a field (for template systems)
+            if kwarg_name == "children":
+                continue
             if kwarg_name not in valid_field_names:
                 raise ValueError(
                     f"Unknown parameter '{kwarg_name}' for {target.__name__}. "
@@ -627,13 +633,14 @@ class HopscotchInjector:
 
         Args:
             target: The class or callable to construct
-            **kwargs: Keyword arguments that override any resolved dependencies
+            **kwargs: Keyword arguments that override any resolved dependencies.
+                     The 'children' kwarg is ignored if not a valid field.
 
         Returns:
             An instance of target with dependencies injected
 
         Raises:
-            ValueError: If unknown kwargs are provided
+            ValueError: If unknown kwargs (other than 'children') are provided
             TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)
@@ -660,6 +667,9 @@ class HopscotchAsyncInjector:
     1. kwargs passed to injector (highest priority)
     2. ServiceLocator for Inject[T] types, falling back to container.aget(T)
     3. default values from field definitions (lowest priority)
+
+    Special handling: The 'children' kwarg is silently ignored if not a valid field, to support
+    template rendering systems (like tdom) that always pass children even when not needed.
     """
 
     container: svcs.Container
@@ -668,9 +678,12 @@ class HopscotchAsyncInjector:
     def _validate_kwargs(
         self, target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any]
     ) -> None:
-        """Validate that all kwargs match actual field names."""
+        """Validate that all kwargs match actual field names, except 'children' which is ignored."""
         valid_field_names = {f.name for f in field_infos}
         for kwarg_name in kwargs:
+            # Special case: 'children' is allowed even if not a field (for template systems)
+            if kwarg_name == "children":
+                continue
             if kwarg_name not in valid_field_names:
                 raise ValueError(
                     f"Unknown parameter '{kwarg_name}' for {target.__name__}. "
@@ -764,13 +777,14 @@ class HopscotchAsyncInjector:
 
         Args:
             target: The class or callable to construct
-            **kwargs: Keyword arguments that override any resolved dependencies
+            **kwargs: Keyword arguments that override any resolved dependencies.
+                     The 'children' kwarg is ignored if not a valid field.
 
         Returns:
             An instance of target with dependencies injected
 
         Raises:
-            ValueError: If unknown kwargs are provided
+            ValueError: If unknown kwargs (other than 'children') are provided
             TypeError: If an Inject field has no inner type
         """
         field_infos = get_field_infos(target)

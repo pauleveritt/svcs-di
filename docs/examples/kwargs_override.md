@@ -15,7 +15,7 @@ This pattern is especially powerful for testing, where you want to substitute mo
 
 ## Source Code
 
-The complete example is available at `/examples/kwargs_override.py`:
+The complete example is available at `examples/kwargs_override.py`:
 
 ```python
 """Kwargs override example.
@@ -367,7 +367,7 @@ The precedence order ensures maximum flexibility: you can always override any pa
 
 Once you're comfortable with kwargs overrides, explore:
 
-- [Basic Dataclass Injection](basic_dataclass.md) to review the fundamentals
+- [Basic Dataclass Injection](basic_injection.md) to review the fundamentals
 - [Protocol-Based Injection](protocol_injection.md) to combine protocols with override patterns for testing
 - [Asynchronous Injection](async_injection.md) to override async dependencies
 - [Custom Injector Implementations](custom_injector.md) for advanced customization beyond kwargs

@@ -1,5 +1,16 @@
 # Type hinting
 
+## Type Checker: ty
+
+This project uses `ty` (Astral's type checker) which provides:
+- Extremely fast type checking
+- Real-time feedback via LSP
+- Modern Python 3.14+ support
+
+**Important:** The ty LSP is automatically configured and provides diagnostics in `<new-diagnostics>` blocks. Trust this feedback - don't run redundant type checks.
+
+See [Tooling Standards](./tooling.md) for details on using ty via skills.
+
 ## Python idioms
 
 - Aggressively use modern Python features for type hinting

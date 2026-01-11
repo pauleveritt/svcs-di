@@ -7,9 +7,10 @@ service resolution.
 """
 
 import inspect
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from pathlib import PurePath
-from typing import Any
+from typing import Any, cast
 
 import svcs
 
@@ -17,6 +18,7 @@ from svcs_di.auto import (
     AsyncInjectionTarget,
     FieldInfo,
     InjectionTarget,
+    ResolutionResult,
     get_field_infos,
 )
 from svcs_di.injectors._helpers import resolve_default_value, validate_kwargs
@@ -28,9 +30,11 @@ def _try_resolve_from_locator_sync(
     resource: type | None,
     location: PurePath | None,
     injector_callable,
-) -> tuple[bool, Any]:
+) -> ResolutionResult:
     """
     Try to resolve a field using ServiceLocator (sync version).
+
+    Precondition: field_info.inner_type must not be None (caller must validate).
 
     Args:
         field_info: Information about the field to resolve
@@ -40,15 +44,20 @@ def _try_resolve_from_locator_sync(
         injector_callable: The injector to use for constructing implementations
 
     Returns:
-        tuple[bool, Any]: (found, value) where found indicates if locator had a match
+        ResolutionResult: (found, value) where found indicates if locator had a match
     """
     # Import here to avoid circular dependency
     from svcs_di.injectors.locator import ServiceLocator
 
+    # Precondition: caller must have validated inner_type is not None
+    assert field_info.inner_type is not None
+
     try:
         locator = container.get(ServiceLocator)
         implementation = locator.get_implementation(
-            field_info.inner_type, resource, location  # type: ignore[arg-type]
+            field_info.inner_type,
+            resource,
+            location,
         )
         if implementation is not None:
             # Construct instance using the injector recursively (for nested injection)
@@ -65,9 +74,11 @@ async def _try_resolve_from_locator_async(
     resource: type | None,
     location: PurePath | None,
     injector_callable,
-) -> tuple[bool, Any]:
+) -> ResolutionResult:
     """
     Try to resolve a field using ServiceLocator (async version).
+
+    Precondition: field_info.inner_type must not be None (caller must validate).
 
     Args:
         field_info: Information about the field to resolve
@@ -77,15 +88,20 @@ async def _try_resolve_from_locator_async(
         injector_callable: The async injector to use for constructing implementations
 
     Returns:
-        tuple[bool, Any]: (found, value) where found indicates if locator had a match
+        ResolutionResult: (found, value) where found indicates if locator had a match
     """
     # Import here to avoid circular dependency
     from svcs_di.injectors.locator import ServiceLocator
 
+    # Precondition: caller must have validated inner_type is not None
+    assert field_info.inner_type is not None
+
     try:
         locator = await container.aget(ServiceLocator)
         implementation = locator.get_implementation(
-            field_info.inner_type, resource, location  # type: ignore[arg-type]
+            field_info.inner_type,
+            resource,
+            location,
         )
         if implementation is not None:
             # Construct instance using the injector recursively (for nested injection)
@@ -98,17 +114,22 @@ async def _try_resolve_from_locator_async(
 
 def _resolve_from_container_with_fallback_sync(
     field_info: FieldInfo, container: svcs.Container
-) -> tuple[bool, Any]:
+) -> ResolutionResult:
     """
     Try to resolve from container, returning (False, None) if not found.
+
+    Precondition: field_info.inner_type must not be None (caller must validate).
 
     Args:
         field_info: Information about the field to resolve
         container: The svcs container
 
     Returns:
-        tuple[bool, Any]: (found, value)
+        ResolutionResult: (found, value)
     """
+    # Precondition: caller must have validated inner_type is not None
+    assert field_info.inner_type is not None
+
     try:
         if field_info.is_protocol:
             return True, container.get_abstract(field_info.inner_type)
@@ -120,17 +141,22 @@ def _resolve_from_container_with_fallback_sync(
 
 async def _resolve_from_container_with_fallback_async(
     field_info: FieldInfo, container: svcs.Container
-) -> tuple[bool, Any]:
+) -> ResolutionResult:
     """
     Try to resolve from container async, returning (False, None) if not found.
+
+    Precondition: field_info.inner_type must not be None (caller must validate).
 
     Args:
         field_info: Information about the field to resolve
         container: The svcs container
 
     Returns:
-        tuple[bool, Any]: (found, value)
+        ResolutionResult: (found, value)
     """
+    # Precondition: caller must have validated inner_type is not None
+    assert field_info.inner_type is not None
+
     try:
         if field_info.is_protocol:
             return True, await container.aget_abstract(field_info.inner_type)
@@ -184,12 +210,12 @@ class HopscotchInjector:
 
     def _resolve_field_value_sync(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
-    ) -> tuple[bool, Any]:
+    ) -> ResolutionResult:
         """
         Resolve a single field's value using three-tier precedence with locator support.
 
         Returns:
-            tuple[bool, Any]: (has_value, value) where has_value indicates if a value was resolved
+            ResolutionResult: (has_value, value) where has_value indicates if a value was resolved
         """
         # Tier 1: kwargs (highest priority)
         if field_info.name in kwargs:
@@ -252,7 +278,7 @@ class HopscotchInjector:
             if has_value:
                 resolved_kwargs[field_info.name] = value
 
-        return target(**resolved_kwargs)  # type: ignore[return-value]
+        return target(**resolved_kwargs)
 
 
 @dataclass(frozen=True)
@@ -298,12 +324,12 @@ class HopscotchAsyncInjector:
 
     async def _resolve_field_value_async(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
-    ) -> tuple[bool, Any]:
+    ) -> ResolutionResult:
         """
         Async version of field value resolution with three-tier precedence and locator support.
 
         Returns:
-            tuple[bool, Any]: (has_value, value) where has_value indicates if a value was resolved
+            ResolutionResult: (has_value, value) where has_value indicates if a value was resolved
         """
         # Tier 1: kwargs (highest priority)
         if field_info.name in kwargs:
@@ -369,5 +395,5 @@ class HopscotchAsyncInjector:
         result = target(**resolved_kwargs)
         # If target is an async callable, await the result
         if inspect.iscoroutinefunction(target):
-            return await result  # type: ignore[return-value]
-        return result  # type: ignore[return-value]
+            return await cast(Awaitable[T], result)
+        return cast(T, result)

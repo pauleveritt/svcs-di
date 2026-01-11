@@ -68,8 +68,6 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "functions.md",  # Internal development notes
-    "initial_spec.md",  # Internal development notes
 ]
 
 # -- Options for HTML output -------------------------------------------------

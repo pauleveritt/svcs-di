@@ -7,7 +7,6 @@ Uses PythonCodeBlockParser to parse ```python blocks containing doctest syntax.
 from sybil import Sybil
 from sybil.parsers.myst import PythonCodeBlockParser
 
-
 # Configure Sybil for docs/ markdown files
 pytest_collect_file = Sybil(
     parsers=[PythonCodeBlockParser()],

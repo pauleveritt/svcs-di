@@ -558,7 +558,7 @@ registry.register_value(ServiceLocator, locator)
 
 ## Related Documentation
 
-- [Basic Dependency Injection](./basic_dataclass.md)
+- [Basic Dependency Injection](basic_injection.md)
 - [Protocol Injection](./protocol_injection.md)
 - [Async Injection](./async_injection.md)
 - [Keyword Arguments Override](./kwargs_override.md)

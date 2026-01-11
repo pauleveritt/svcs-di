@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-
 from svcs_di.auto import (
     Inject,
     extract_inner_type,

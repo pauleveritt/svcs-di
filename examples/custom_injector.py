@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from svcs import Container, Registry
 
-from svcs_di import Injector, Inject, auto
+from svcs_di import Inject, Injector, auto
 from svcs_di.auto import DefaultInjector
 
 

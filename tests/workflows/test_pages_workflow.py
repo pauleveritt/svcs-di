@@ -4,8 +4,9 @@ These tests verify the structure and behavior of the documentation deployment wo
 They focus on critical configuration aspects without testing GitHub Actions internals.
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def test_pages_workflow_exists():

@@ -1,9 +1,9 @@
 """Tests for Inject[Container] support across all injector types."""
 
+from dataclasses import dataclass
+
 import pytest
 import svcs
-
-from dataclasses import dataclass
 
 from svcs_di.auto import (
     DefaultAsyncInjector,
@@ -15,7 +15,6 @@ from svcs_di.injectors.locator import (
     HopscotchAsyncInjector,
     HopscotchInjector,
 )
-
 
 # ============================================================================
 # Shared Test Fixtures
@@ -287,6 +286,7 @@ def test_hopscotch_injector_kwargs_override():
 def test_hopscotch_injector_context_agnostic():
     """HopscotchInjector: Container is not affected by context-aware resolution."""
     from pathlib import PurePath
+
     from svcs_di.injectors.locator import Location, ServiceLocator
 
     registry = svcs.Registry()
@@ -342,6 +342,7 @@ async def test_hopscotch_async_injector_kwargs_override():
 async def test_hopscotch_async_injector_context_agnostic():
     """HopscotchAsyncInjector: Container is not affected by context-aware resolution."""
     from pathlib import PurePath
+
     from svcs_di.injectors.locator import Location, ServiceLocator
 
     registry = svcs.Registry()

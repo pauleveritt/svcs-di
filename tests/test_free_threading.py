@@ -7,7 +7,7 @@ Python (no-GIL mode) through concurrent access stress tests.
 Thread-Safety Design Patterns Verified:
 - Immutability: Frozen dataclasses, PurePath, and immutable data structures
 - Atomic operations: Dict get/set operations are thread-safe
-- Idempotent cache: Multiple threads computing same result is acceptable
+- Idempotent cache: Multiple threads computing same r is acceptable
 - No global state: All state is local to immutable objects
 
 The tests in this module use multiple concurrent threads to stress-test the following:
@@ -38,7 +38,6 @@ from svcs_di.injectors.locator import (
     ServiceLocator,
     scan,
 )
-
 
 # ============================================================================
 # Task Group 1: Infrastructure Setup
@@ -240,7 +239,7 @@ def test_purepath_immutability():
 
 @pytest.mark.freethreaded
 def test_service_locator_idempotent_cache():
-    """Test that multiple threads computing same cached result is acceptable."""
+    """Test that multiple threads computing same cached r is acceptable."""
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
 
@@ -248,10 +247,10 @@ def test_service_locator_idempotent_cache():
     errors = []
 
     def worker():
-        """Worker thread that performs lookups, potentially computing same result."""
+        """Worker thread that performs lookups, potentially computing same r."""
         try:
             # Clear the cache entry by accessing it from a fresh perspective
-            # (in practice, cache is shared and threads may compute same result)
+            # (in practice, cache is shared and threads may compute same r)
             impl = locator.get_implementation(Greeting)
             results.append(impl)
         except Exception as e:

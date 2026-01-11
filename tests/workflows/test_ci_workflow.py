@@ -4,8 +4,9 @@ These tests verify the structure and behavior of the GitHub Actions CI workflow.
 They focus on critical configuration aspects without testing GitHub Actions internals.
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def test_ci_workflow_exists():

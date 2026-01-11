@@ -1,18 +1,21 @@
 """Basic function injection example.
 
-This example demonstrates using svcs-di with regular functions:
+This example demonstrates using svcs-di with regular functions. These require manual injection since `svcs` can't
+register factories for non-types:
+- Uses the DefaultInjector
+- Register a service in the container
 - Define a function with Inject dependencies
-- Register services in the container
 - Use an injector to manually call the function with dependencies resolved
 """
 
 from dataclasses import dataclass
 
-import svcs
+from svcs import Container, Registry
 
 from svcs_di import DefaultInjector, Inject
 
 
+# A service that will be registered then injected with Inject[Database]
 @dataclass
 class Database:
     """A simple database service."""
@@ -21,16 +24,8 @@ class Database:
     port: int = 5432
 
 
-def create_service(db: Inject[Database], timeout: int = 30) -> dict:
-    """A function that depends on a database.
-
-    Args:
-        db: Database instance (injected from container)
-        timeout: Connection timeout in seconds (has default)
-
-    Returns:
-        Dictionary with service configuration
-    """
+def create_result(db: Inject[Database], timeout: int = 30) -> dict:
+    """A function that depends on a database via injection."""
     return {
         "database_host": db.host,
         "database_port": db.port,
@@ -38,23 +33,23 @@ def create_service(db: Inject[Database], timeout: int = 30) -> dict:
     }
 
 
-def main():
+def main() -> dict[str, str | int]:
     """Demonstrate basic function injection."""
-    # Create registry and register services
-    registry = svcs.Registry()
+    # Create registry and register the service
+    registry = Registry()
     registry.register_factory(Database, Database)
 
-    # Create container and injector
-    container = svcs.Container(registry)
+    # Create container and injector, then call-with-injection the function
+    container = Container(registry)
     injector = DefaultInjector(container=container)
+    result = injector(create_result)
 
-    # Call the function with automatic dependency resolution
-    result = injector(create_service)
+    # Test the result
+    assert result["database_host"] == "localhost"
+    assert result["database_port"] == 5432
 
-    print(f"Service configuration: {result}")
-    print(f"Database host={result['database_host']}, port={result['database_port']}")
-    print(f"Timeout={result['timeout']}")
+    return result
 
 
 if __name__ == "__main__":
-    main()
+    print(main())

@@ -8,6 +8,9 @@
 :hidden:
 
 examples/index
+keyword/index
+hopscotch/index
+scanning/index
 core-concepts
 api-reference
 specifications/index

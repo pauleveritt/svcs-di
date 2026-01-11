@@ -29,8 +29,12 @@ def test_nested_package_scanning_with_string_name():
     container = svcs.Container(registry)
 
     # Import classes for verification (after scanning!)
-    from nested_app.models.database import DatabaseConnection  # type: ignore[import-not-found]
-    from nested_app.repositories.user_repository import UserRepository  # type: ignore[import-not-found]
+    from nested_app.models.database import (
+        DatabaseConnection,  # type: ignore[import-not-found]
+    )
+    from nested_app.repositories.user_repository import (
+        UserRepository,  # type: ignore[import-not-found]
+    )
     from nested_app.services.cache import CacheService  # type: ignore[import-not-found]
     from nested_app.services.email import EmailService  # type: ignore[import-not-found]
 

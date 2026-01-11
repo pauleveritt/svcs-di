@@ -16,6 +16,7 @@ from typing import (
     Any,
     NamedTuple,
     Protocol,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -44,6 +45,9 @@ type SvcsFactory[T] = Callable[..., T]
 type AsyncSvcsFactory[T] = Callable[..., Awaitable[T]]
 type InjectionTarget[T] = type[T] | Callable[..., T]
 type AsyncInjectionTarget[T] = type[T] | Callable[..., Awaitable[T]]
+
+# Resolution result: (found, value) where found indicates if resolution succeeded
+type ResolutionResult = tuple[bool, Any]
 
 
 # ============================================================================
@@ -151,7 +155,7 @@ class DefaultInjector:
         """
         field_infos = get_field_infos(target)
         resolved_kwargs = _build_injected_kwargs_sync(field_infos, self.container)
-        return target(**resolved_kwargs)  # type: ignore[return-value]
+        return target(**resolved_kwargs)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -186,8 +190,8 @@ class DefaultAsyncInjector:
         result = target(**resolved_kwargs)
         # If target is an async callable, await the result
         if inspect.iscoroutinefunction(target):
-            return await result  # type: ignore[return-value]
-        return result  # type: ignore[return-value]
+            return await cast(Awaitable[T], result)
+        return cast(T, result)
 
 
 # ============================================================================
@@ -345,9 +349,10 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
     """Extract field information from a dataclass."""
     type_hints = _safe_get_type_hints(target, f"dataclass {target.__name__!r}")
 
-    # dataclasses.fields() expects DataclassInstance, but we've already validated
-    # target is a dataclass via is_dataclass() check. Type checkers can't infer this.
-    fields = dataclasses.fields(target)  # type: ignore[arg-type]
+    # dataclasses.fields() expects DataclassInstance. We've validated target is a
+    # dataclass via is_dataclass() check in get_field_infos(), but type checkers
+    # can't narrow based on that runtime check.
+    fields = dataclasses.fields(cast(Any, target))
 
     field_infos = []
     for field in fields:
@@ -372,7 +377,9 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
     return field_infos
 
 
-def _get_safe_signature(target: Callable, callable_name: str) -> inspect.Signature | None:
+def _get_safe_signature(
+    target: Callable, callable_name: str
+) -> inspect.Signature | None:
     """
     Get signature for a callable with unified error handling.
 
@@ -440,7 +447,7 @@ def _get_callable_field_infos(target: Callable) -> list[FieldInfo]:
 
 def _resolve_field_value(
     field_info: FieldInfo, container: svcs.Container
-) -> tuple[bool, Any]:
+) -> ResolutionResult:
     """
     Resolve a single field's value using two-tier precedence.
 
@@ -478,7 +485,7 @@ def _resolve_field_value(
 
 async def _resolve_field_value_async(
     field_info: FieldInfo, container: svcs.Container
-) -> tuple[bool, Any]:
+) -> ResolutionResult:
     """
     Async version of _resolve_field_value using two-tier precedence.
 

@@ -9,12 +9,12 @@ This example demonstrates using protocols for abstract dependencies:
 from dataclasses import dataclass
 from typing import Protocol
 
-import svcs
+from svcs import Container, Registry
 
 from svcs_di import Inject, auto
 
 
-class GreeterProtocol(Protocol):
+class Greeter(Protocol):
     """Protocol defining the interface for a greeter service."""
 
     def greet(self, name: str) -> str:
@@ -22,55 +22,41 @@ class GreeterProtocol(Protocol):
         ...
 
 
-class EnglishGreeter:
+class DefaultGreeter:
     """Concrete implementation of GreeterProtocol."""
 
     def greet(self, name: str) -> str:
         return f"Hello, {name}!"
 
 
-class SpanishGreeter:
-    """Alternative concrete implementation of GreeterProtocol."""
-
-    def greet(self, name: str) -> str:
-        return f"¡Hola, {name}!"
-
-
+# A service that depends on an implementation of the protocol
 @dataclass
 class Application:
     """Application that depends on a greeter (via protocol)."""
 
-    greeter: Inject[GreeterProtocol]
+    greeter: Inject[Greeter]
     app_name: str = "MyApp"
 
 
-def main():
-    """Demonstrate protocol-based injection."""
+def main() -> Application:
     # Create registry
-    registry = svcs.Registry()
+    registry = Registry()
 
-    # Register protocol with concrete implementation (English)
-    registry.register_value(GreeterProtocol, EnglishGreeter())
+    # Register protocol with concrete implementation
+    registry.register_factory(Greeter, DefaultGreeter)
 
-    # Register application with auto()
+    # Register application with auto(), which lets us resolve `Inject`
     registry.register_factory(Application, auto(Application))
 
+    # Later, during a request...
     # Get application - greeter is resolved via protocol
-    container = svcs.Container(registry)
+    container = Container(registry)
     app = container.get(Application)
 
-    print(f"{app.app_name}: {app.greeter.greet('World')}")  # type: ignore[attr-defined]
+    assert app.greeter.greet("World") == "Hello, World!"
 
-    # Demonstrate swapping implementations
-    registry2 = svcs.Registry()
-    registry2.register_value(GreeterProtocol, SpanishGreeter())
-    registry2.register_factory(Application, auto(Application))
-
-    container2 = svcs.Container(registry2)
-    app2 = container2.get(Application)
-
-    print(f"{app2.app_name}: {app2.greeter.greet('Mundo')}")  # type: ignore[attr-defined]
+    return app
 
 
 if __name__ == "__main__":
-    main()
+    print(main())

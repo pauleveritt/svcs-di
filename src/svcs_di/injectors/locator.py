@@ -145,9 +145,9 @@ For complete examples, see:
 import functools
 from dataclasses import dataclass, field
 from pathlib import PurePath
+from typing import cast
 
 import svcs
-
 
 # ============================================================================
 # Scoring Constants
@@ -155,11 +155,11 @@ import svcs
 
 # Scoring weights for service resolution precedence
 LOCATION_SCORE_MATCH = 1000  # Exact or hierarchical location match
-LOCATION_SCORE_GLOBAL = 0    # Global registration (no location constraint)
-RESOURCE_SCORE_EXACT = 100   # Exact resource type match
-RESOURCE_SCORE_SUBCLASS = 10 # Subclass resource type match
-RESOURCE_SCORE_DEFAULT = 0   # Default/global registration (no resource constraint)
-SCORE_NO_MATCH = -1          # No match found
+LOCATION_SCORE_GLOBAL = 0  # Global registration (no location constraint)
+RESOURCE_SCORE_EXACT = 100  # Exact resource type match
+RESOURCE_SCORE_SUBCLASS = 10  # Subclass resource type match
+RESOURCE_SCORE_DEFAULT = 0  # Default/global registration (no resource constraint)
+SCORE_NO_MATCH = -1  # No match found
 PERFECT_SCORE = LOCATION_SCORE_MATCH + RESOURCE_SCORE_EXACT  # 1100
 
 
@@ -210,9 +210,7 @@ class FactoryRegistration:
     resource: type | None = None
     location: PurePath | None = None
 
-    def matches(
-        self, resource: type | None, location: PurePath | None = None
-    ) -> int:
+    def matches(self, resource: type | None, location: PurePath | None = None) -> int:
         """
         Calculate match score for this registration.
 
@@ -527,10 +525,10 @@ def get_from_locator[T](
             f"No implementation found for {service_type.__name__} with resource {resource}"
         )
 
-    # Construct the instance from the implementation class
-    # Type ignore needed: implementation is type[T], calling it returns T,
-    # but type checkers can't infer constructor signatures generically
-    return implementation()  # type: ignore[return-value]
+    # Construct the instance from the implementation class.
+    # Cast needed: implementation is type (subclass of service_type), calling it
+    # returns an instance, but type checkers can't verify this statically.
+    return cast(T, implementation())
 
 
 # ============================================================================

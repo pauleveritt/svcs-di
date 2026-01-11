@@ -2,6 +2,9 @@
 
 Dependency injection using svcs. Simple by default with options for more bling.
 
+*Disclosure: This package was largely written with a coding agent pointed at a previous implementation. All results were
+reviewed and much was hand-edited.*
+
 ## Installation
 
 ```bash
@@ -19,22 +22,23 @@ $ pip install svcs-di
 - **svcs**
 - **Python 3.14+** (uses PEP 695 generics and modern type parameter syntax)
 
-## Plans for `svcs` integration
+## Integrating injection into `svcs`
 
-As discussed [in svcs](https://github.com/hynek/svcs/discussions/94) there might be interested in an `auto` factory that
-does simple injection. This repo has a standalone file `auto.py` (and `auto.pyi` explained below) for this minimal use.
+As discussed [in svcs](https://github.com/hynek/svcs/discussions/94) there might be interest in an `auto` factory that
+does simple injection. This repo has a standalone file `auto.py` (and `auto.pyi` as explained below) for this minimal
+use.
 
-While this repo requires Python 3.14, this is only for easier type hinting (`type` keyword, better generics). We will
-change to Python 3.12+ if `auto.py` goes into `svcs`.
+*Note: While this repo requires Python 3.14, this is only for easier type hinting (`type` keyword, better generics). We
+will change to Python 3.10+ if `auto.py` goes into `svcs`.*
 
 ## Default Injector and `auto`
 
 This repo adds an `auto` factory to `svcs` that does simple injection.
 
-- Register your factory with a wrapped target
+- Register your factory with an `auto` wrapper
 - `auto` looks up the registered injector
 - The injector looks at the target's parameters
-- Parameters marked with `Inject[SomeService]` are retrieved from container and added to arguments
+- Parameters marked with `Inject[SomeService]` are retrieved from the container and added to arguments
 
 ### Quick Start
 
@@ -43,7 +47,7 @@ In this example, the `Service` expects to be handed a `Database` instance.
 ```python
 from dataclasses import dataclass
 
-import svcs
+from svcs import Container, Registry
 
 from svcs_di import Inject, auto
 
@@ -64,20 +68,21 @@ class Service:
     timeout: int = 30
 
 
-def main():
+def main() -> Service:
     """Demonstrate basic dataclass injection."""
     # Create registry and register services
-    registry = svcs.Registry()
+    registry = Registry()
     registry.register_factory(Database, Database)
-    # Here is where the magic happens
     registry.register_factory(Service, auto(Service))
 
     # Get the service - dependencies are automatically resolved
-    container = svcs.Container(registry)
+    container = Container(registry)
     service = container.get(Service)
 
-    print(f"Service created with timeout={service.timeout}")
-    print(f"Database host={service.db.host}, port={service.db.port}")
+    assert service.db.host == "localhost"
+    assert service.db.port == 5432
+
+    return service
 ```
 
 ### Features
@@ -96,86 +101,69 @@ def main():
 - **Type-safe with stubs**: Includes `.pyi` stub file so type checkers understand `Inject[T]` attributes without
   requiring `cast()`
 
-### Testing
-
-```bash
-# Run tests
-pytest
-
-# Run tests in parallel
-pytest -n auto
-
-# Run with coverage
-pytest --cov=svcs_di
-```
-
-## Keyword Injector
+## Keyword Injector and `InjectorContainer`
 
 **Note to Hynek: These other injectors are custom to me, not for `svcs` directly, and they are all insane so stop
 reading here. Don't look, your eyes will burn with all the energy from the Great Pyramid.**
 
 The `KeywordInjector` extends the default injector with support for kwargs overrides, providing three-tier value
-resolution.
+resolution: kwargs, injection, default value.
 
-- Register it as a custom injector to enable kwargs override support
+- Register `KeywordInjector` as the `Injector` to enable kwargs override support
 - The injector looks at the target's parameters
 - Parameters can be overridden by kwargs passed to the injector
 - Inject parameters are resolved from container if not overridden
-- Default values are used as final fallback
+- Default values are used as a final fallback
+
+To wire up and use this, `svcs-di` provides an `InjectorContainer`:
+
+- Registers `KeywordInjector` as the `Injector`
+- Adds a `.inject()` method that serves as `.get()` but with `**kwargs`
+- You no longer need to use `auto()` to wrap your factory
+
+Where might this be useful? Component "props."
 
 ### Quick Start
 
-In this example, the `DBService` expects a `Database` instance, but we can override it at construction/ time.
+In this example, the `Service` has default values that are overridden at construction time.
 
 ```python
-from dataclasses import dataclass
-
-import svcs
-
-from svcs_di import Inject, auto
-from svcs_di.injectors import KeywordInjector
-
-
 @dataclass
 class Database:
-    """A simple database service."""
+    """A database service."""
 
     host: str = "localhost"
     port: int = 5432
 
 
 @dataclass
-class DBService:
-    """A service that depends on a database."""
+class Service:
+    """A service with injectable and non-injectable parameters."""
 
     db: Inject[Database]
+    debug: bool = False
     timeout: int = 30
 
 
-def main():
-    """Demonstrate KeywordInjector with kwargs override."""
-    # Create registry and register services
-    registry = svcs.Registry()
+def main() -> Service:
+    """Demonstrate KeywordInjector's three-tier precedence."""
+    registry = Registry()
+
+    # Register services and the KeywordInjector as the default injector
     registry.register_factory(Database, Database)
+    registry.register_factory(Service, Service)
 
-    # Register KeywordInjector to enable kwargs override
-    registry.register_factory(
-        KeywordInjector,
-        lambda c: KeywordInjector(container=c)
-    )
-    registry.register_factory(DBService, auto(DBService))
+    # Per-request container
+    container = InjectorContainer(registry)
 
-    # Get the service - can override dependencies with kwargs
-    container = svcs.Container(registry)
-
-    # Use default database from container
-    service1 = container.get(DBService)
-    print(f"Service 1 - host={service1.db.host}, port={service1.db.port}")
-
-    # Override with a test database
-    test_db = Database(host="test", port=1234)
-    service2 = container.get(DBService, db=test_db, timeout=60)
-    print(f"Service 2 - host={service2.db.host}, port={service2.db.port}, timeout={service2.timeout}")
+    # Let's get a service but use kwargs to override the defaults
+    # in the dataclass.
+    service = container.inject(Service, debug=True, timeout=99)
+    assert service.debug is not False
+    assert service.debug is True
+    assert service.timeout != 30
+    assert service.timeout == 99
+    return service
 ```
 
 ### Features
@@ -185,6 +173,11 @@ def main():
 - **Test-friendly**: Override dependencies at construction time for testing without modifying the registry
 - **Kwargs validation**: Raises `ValueError` if unknown kwargs are provided
 - **Async support**: `KeywordAsyncInjector` provides the same functionality for async dependencies
+
+In summary, the `KeywordInjector` with `inject()` is similar to the default injector, but with kwargs overrides.
+
+Note: Using `.inject()` does *not* do caching of the service instance, because it can vary based on kwargs. However, any
+injection done *during* `.inject()` obeys the same `svcs` caching rules.
 
 ## Hopscotch Injector
 
@@ -306,13 +299,20 @@ def main():
 
 ## Decorator Scanning
 
-The `@injectable` decorator and `scan()` function provide automatic service discovery and registration, eliminating manual registration boilerplate.
+The `@injectable` decorator and `scan()` function provide automatic service discovery and registration, eliminating
+manual registration boilerplate.
 
 - Mark classes with `@injectable` for auto-discovery at startup
 - Use `scan()` to discover and register decorated classes automatically
 - Supports resource-based registrations with `@injectable(resource=...)`
 - Supports location-based registrations with `@injectable(location=...)`
 - Supports multiple implementations with `@injectable(for_=...)`
+
+This feature is like [venusian](https://github.com/Pylons/venusian), but:
+
+- For `svcs` and `svcs-di`
+- Much smaller with almost no features (categories, etc.)
+- Only for "modern" Python
 
 ### Quick Start
 
@@ -487,4 +487,19 @@ service = container.get(Service)  # Gets DefaultGreeting or EmployeeGreeting bas
 - **ServiceLocator integration**: Resource/location-based decorators automatically use `ServiceLocator`
 - **Direct registry fallback**: Simple `@injectable` without resource/location registers directly to registry
 - **Nested injection**: Works seamlessly with `Inject[T]` dependency injection
+
+## Development
+
+### Testing
+
+```bash
+# Run tests
+pytest
+
+# Run tests in parallel
+pytest -n auto
+
+# Run with coverage
+pytest --cov=svcs_di
+```
 

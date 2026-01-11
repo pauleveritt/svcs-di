@@ -26,7 +26,19 @@ See examples/scanning/ for complete examples.
 
 import inspect
 from pathlib import PurePath
-from typing import Callable, overload
+from typing import Callable, TypedDict, overload
+
+
+class InjectableMetadata(TypedDict):
+    """Metadata stored on classes by the @injectable decorator."""
+
+    for_: type | None
+    resource: type | None
+    location: PurePath | None
+
+
+# Attribute name used to store injectable metadata on decorated classes
+INJECTABLE_METADATA_ATTR = "__injectable_metadata__"
 
 
 def _mark_injectable(
@@ -48,11 +60,12 @@ def _mark_injectable(
         )
         raise TypeError(msg)
 
-    target.__injectable_metadata__ = {  # type: ignore[attr-defined]
+    metadata: InjectableMetadata = {
         "for_": for_,
         "resource": resource,
         "location": location,
     }
+    setattr(target, INJECTABLE_METADATA_ATTR, metadata)
     return target
 
 

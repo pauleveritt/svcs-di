@@ -4,6 +4,15 @@
 - Below is an example of setting up a Justfile for one of our projects
 - Add a Justfile to new projects created by Agent OS `plan-project`
 
+## Agent OS Usage Note
+
+**When working with Agent OS, prefer Astral skills over Just recipes for:**
+- Linting/formatting: Use `Skill(skill="astral:ruff")` instead of `just lint` or `just fmt`
+- Type checking: Use `Skill(skill="astral:ty")` instead of `just typecheck`
+- Testing: Use `Skill(skill="astral:uv", args="run pytest")` instead of `just test`
+
+The Just recipes below are provided for manual command-line use and CI pipelines, but Agent OS should use the Astral skills directly.
+
 ```just
 # Requires: just, uv, Python 3.14.2t (free-threaded build)
 # All tasks use uv to ensure isolated, reproducible runs.
@@ -34,7 +43,7 @@ test-parallel *ARGS:
 
 # Run tests with free-threading safety checks - tests for Python 3.14t GIL-free threading issues
 # Runs tests 10 times across 8 threads to catch race conditions and deadlocks
-test-run-parallel:
+test-freethreaded:
     uv run pytest -p freethreaded -p no:doctest --threads=8 --iterations=10 --require-gil-disabled tests
 
 # Lint code (check for issues) - runs ruff linter to find code quality issues, doesn't modify files
@@ -98,7 +107,7 @@ ci-checks:
 # Run all checks + free-threading safety tests - extends ci-checks with GIL-free tests
 # Use this for comprehensive testing before releases
 ci-checks-ft:
-    just ci-checks && just test-run-parallel
+    just ci-checks && just test-freethreaded
 
 # Enable pre-push hook to run ci-checks before pushing - installs git hook
 # Automatically runs full quality checks before every git push

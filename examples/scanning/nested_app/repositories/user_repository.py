@@ -1,25 +1,20 @@
-"""User repository in repositories subdirectory."""
+"""User repository implementation in repositories subdirectory."""
 
 from dataclasses import dataclass
 
-from svcs_di.auto import Inject
+from svcs_di import Inject
 from svcs_di.injectors.decorators import injectable
 
-# Import from other nested modules to show cross-module dependencies
-from ..models.database import DatabaseConnection
-from ..services.cache import CacheService
+from ..protocols import Cache, Database, UserRepository
 
 
-@injectable
+@injectable(for_=UserRepository)
 @dataclass
-class UserRepository:
-    """User repository found in repositories/user_repository.py.
+class SqlUserRepository:
+    """SQL implementation of UserRepository protocol."""
 
-    Demonstrates cross-module dependencies within nested structure.
-    """
-
-    db: Inject[DatabaseConnection]
-    cache: Inject[CacheService]
+    db: Inject[Database]
+    cache: Inject[Cache]
 
     def get_user(self, user_id: int) -> str:
         """Get user with database and cache."""

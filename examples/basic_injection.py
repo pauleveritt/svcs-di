@@ -1,15 +1,15 @@
 """Basic dataclass injection example.
 
 This example demonstrates the simplest use case of svcs-di:
+- Uses the DefaultInjector
 - Define a dataclass with Inject dependencies
 - Register services with auto()
-- Uses the DefaultInjector
 - Retrieve services with automatic dependency resolution
 """
 
 from dataclasses import dataclass
 
-import svcs
+from svcs import Container, Registry
 
 from svcs_di import Inject, auto
 
@@ -22,6 +22,7 @@ class Database:
     port: int = 5432
 
 
+# The `db` is injected from the container
 @dataclass
 class Service:
     """A service that depends on a database."""
@@ -30,20 +31,21 @@ class Service:
     timeout: int = 30
 
 
-def main():
-    """Demonstrate basic dataclass injection."""
+def main() -> Service:
     # Create registry and register services
-    registry = svcs.Registry()
+    registry = Registry()
     registry.register_factory(Database, Database)
     registry.register_factory(Service, auto(Service))
 
     # Get the service - dependencies are automatically resolved
-    container = svcs.Container(registry)
+    container = Container(registry)
     service = container.get(Service)
 
-    print(f"Service created with timeout={service.timeout}")
-    print(f"Database host={service.db.host}, port={service.db.port}")  # type: ignore[attr-defined]
+    assert service.db.host == "localhost"
+    assert service.db.port == 5432
+
+    return service
 
 
 if __name__ == "__main__":
-    main()
+    print(main())

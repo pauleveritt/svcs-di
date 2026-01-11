@@ -14,6 +14,9 @@ Key exports:
 - DefaultAsyncInjector: Default asynchronous injector implementation
 - KeywordInjector: Injector with kwargs override support (three-tier precedence)
 - KeywordAsyncInjector: Async injector with kwargs override support
+- InjectorContainer: Container with integrated injector support for kwargs
+- HopscotchRegistry: Registry with pre-wired ServiceLocator integration
+- HopscotchContainer: Container with HopscotchInjector defaults
 - InjectionTarget: Type alias for class or callable targets (type[T] | Callable[..., T])
 - AsyncInjectionTarget: Type alias for async targets (type[T] | Callable[..., Awaitable[T]])
 """
@@ -29,6 +32,8 @@ from svcs_di.auto import (
     auto,
     auto_async,
 )
+from svcs_di.hopscotch_registry import HopscotchContainer, HopscotchRegistry
+from svcs_di.injector_container import InjectorContainer
 from svcs_di.injectors.keyword import KeywordAsyncInjector, KeywordInjector
 
 __all__ = [
@@ -41,6 +46,9 @@ __all__ = [
     "DefaultAsyncInjector",
     "KeywordInjector",
     "KeywordAsyncInjector",
+    "InjectorContainer",
+    "HopscotchRegistry",
+    "HopscotchContainer",
     "InjectionTarget",
     "AsyncInjectionTarget",
 ]

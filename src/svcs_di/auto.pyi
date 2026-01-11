@@ -7,7 +7,7 @@ should be treated as T, while the runtime .py file maintains the actual marker c
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, NamedTuple, Protocol
+from typing import Any, NamedTuple, Protocol, overload
 
 import svcs
 
@@ -17,13 +17,22 @@ type AsyncSvcsFactory[T] = Callable[..., Awaitable[T]]
 type InjectionTarget[T] = type[T] | Callable[..., T]
 type AsyncInjectionTarget[T] = type[T] | Callable[..., Awaitable[T]]
 
-# Injector Protocols
+# Resolution result: (found, value) where found indicates if resolution succeeded
+type ResolutionResult = tuple[bool, Any]
+
+# Injector Protocols - use @overload for proper generic inference
 class Injector(Protocol):
-    def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T: ...
+    @overload
+    def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    @overload
+    def __call__[T](self, target: Callable[..., T], **kwargs: Any) -> T: ...
 
 class AsyncInjector(Protocol):
+    @overload
+    async def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    @overload
     async def __call__[T](
-        self, target: AsyncInjectionTarget[T], **kwargs: Any
+        self, target: Callable[..., Awaitable[T]], **kwargs: Any
     ) -> T: ...
 
 # For type checkers: Inject[T] is just T
@@ -52,13 +61,19 @@ def get_field_infos(target: type | Callable) -> list[FieldInfo]: ...
 @dataclass(frozen=True)
 class DefaultInjector:
     container: svcs.Container
-    def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T: ...
+    @overload
+    def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    @overload
+    def __call__[T](self, target: Callable[..., T], **kwargs: Any) -> T: ...
 
 @dataclass(frozen=True)
 class DefaultAsyncInjector:
     container: svcs.Container
+    @overload
+    async def __call__[T](self, target: type[T], **kwargs: Any) -> T: ...
+    @overload
     async def __call__[T](
-        self, target: AsyncInjectionTarget[T], **kwargs: Any
+        self, target: Callable[..., Awaitable[T]], **kwargs: Any
     ) -> T: ...
 
 def auto[T](

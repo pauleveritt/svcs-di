@@ -4,8 +4,9 @@ These tests verify that the CI and Pages workflows work together correctly,
 focusing on workflow interactions and composite action reusability.
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def test_both_workflows_use_composite_action():

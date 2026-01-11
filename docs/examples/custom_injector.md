@@ -16,7 +16,7 @@ This example demonstrates the advanced extensibility of svcs-di through custom i
 
 ## Source Code
 
-The complete example is available at `/examples/custom_injector.py`:
+The complete example is available at `examples/custom_injector.py`:
 
 ```python
 """Custom injector example.
@@ -512,7 +512,7 @@ Custom injectors are an advanced feature for specialized use cases. Before imple
 - **Maintenance burden**: Custom injectors add complexity that future developers must understand
 
 If you determine you need a custom injector, refer back to:
-- [Basic Dataclass Injection](basic_dataclass.md) to understand the fundamentals of `auto()`
+- [Basic Dataclass Injection](basic_injection.md) to understand the fundamentals of `auto()`
 - [Overriding Dependencies with Kwargs](kwargs_override.md) to see how kwargs interact with injection
 
 When custom injectors are appropriate (logging, validation, authorization, performance monitoring), they provide a powerful extension point that maintains type safety while enabling sophisticated cross-cutting concerns.

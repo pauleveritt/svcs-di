@@ -60,15 +60,27 @@
 13. [x] Inject Container — Get the KeywordInjector and HopscotchInjector to recognize `Inject[Container]` if present and
     add the `svcs.Container` instance to the arguments. `S`
 
-14. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
+14. [x] InjectionContainer — Provide a `svcs.injector.InjectorContainer` variation of `svcs.Container` where `.get()`
+    and `aget()` allow kwargs. This method should look for a registered injector. If not, use the base class `.get()`.
+    Otherwise, find the registered injector and use it. But make sure it supports keyword injection. For example,
+    `container = InjectorContainer(container); container.get(MyService, arg1=val1, arg2=val2)`. Write good tests. `M`
+
+15. [ ] Hopscotch Registry — Provide HopscotchRegistry and HopscotchContainer as pre-wired implementations. Read
+    `docs/hopscotch_registry_plan.md` for instructions.
+
+16. [ ] Function Implementations — Read `docs/function_implementations_plan.md` for instructions. Allow factories to be
+    functions, both for manual registrations and decorator. Have examples for DefaultInjector, KeywordInjector, and
+    HopscotchInjector, plus docs for the examples.
+
+17. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
     context/location matching, add benchmarks comparing with plain `svcs` and other DI approaches, document performance
     characteristics and trade-offs. `M`
 
-15. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
+18. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
     features like operators, configuration injection, and enhanced metadata, re-imagined to avoid import-time instance
     construction (perhaps using generics). Keep as optional module. Look in ` `L`
 
-16. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
+19. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
     for plugging in custom predicates. `M`
 
 > Notes

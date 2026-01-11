@@ -561,7 +561,7 @@ async def test_hopscotch_async_injector_kwargs_override(registry):
 
 
 def test_cache_hit_after_first_lookup():
-    """Test that cache returns same result for repeated lookups with same service_type and resource."""
+    """Test that cache returns same r for repeated lookups with same service_type and resource."""
     locator = ServiceLocator()
     locator = locator.register(Greeting, DefaultGreeting)
     locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
@@ -841,7 +841,7 @@ def test_location_cache_includes_location_in_key():
     impl1 = locator.get_implementation(Greeting, location=PurePath("/admin"))
     assert impl1 == AdminGreeting
 
-    # Lookup without location should get different result (cached separately)
+    # Lookup without location should get different r (cached separately)
     impl2 = locator.get_implementation(Greeting)
     assert impl2 == DefaultGreeting
 

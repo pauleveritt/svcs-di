@@ -119,6 +119,7 @@ def test_injector_propagates_service_not_found():
 async def test_async_injector_with_mixed_dependencies():
     """Test async injector can handle both sync and async dependencies."""
     import asyncio
+
     from svcs_di import DefaultAsyncInjector
 
     @dataclass

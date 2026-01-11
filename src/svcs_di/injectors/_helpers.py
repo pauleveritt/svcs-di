@@ -5,19 +5,23 @@ This module contains common functionality used across multiple injector
 classes to reduce code duplication between sync/async variants.
 """
 
+from collections.abc import Callable
 from typing import Any
 
 from svcs_di.auto import FieldInfo
 
 
 def validate_kwargs(
-    target: type, field_infos: list[FieldInfo], kwargs: dict[str, Any], allow_children: bool = False
+    target: type | Callable[..., Any],
+    field_infos: list[FieldInfo],
+    kwargs: dict[str, Any],
+    allow_children: bool = False,
 ) -> None:
     """
     Validate that all kwargs match actual field names.
 
     Args:
-        target: The target class being constructed
+        target: The target class or callable being invoked
         field_infos: List of field information for the target
         kwargs: The keyword arguments to validate
         allow_children: If True, silently allow 'children' kwarg even if not a field
@@ -32,8 +36,9 @@ def validate_kwargs(
         if allow_children and kwarg_name == "children":
             continue
         if kwarg_name not in valid_field_names:
+            target_name = getattr(target, "__name__", repr(target))
             raise ValueError(
-                f"Unknown parameter '{kwarg_name}' for {target.__name__}. "
+                f"Unknown parameter '{kwarg_name}' for {target_name}. "
                 f"Valid parameters: {', '.join(sorted(valid_field_names))}"
             )
 

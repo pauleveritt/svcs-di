@@ -155,10 +155,10 @@ Instead of linking directly to raw markdown files outside the docs tree, create 
 
 **Step 1: Create wrapper pages for product documentation**
 
+**IMPORTANT:** Wrapper pages should contain ONLY the `{include}` directive - do NOT add a `# Title` header. The included source files already have their own titles, so adding one in the wrapper creates duplicate headers in the rendered documentation.
+
 **File: docs/specifications/product/mission.md**
 ```markdown
-# Product Mission
-
 ```{include} ../../../agent-os/product/mission.md
 :relative-docs: docs/
 :relative-images:
@@ -167,8 +167,6 @@ Instead of linking directly to raw markdown files outside the docs tree, create 
 
 **File: docs/specifications/product/roadmap.md**
 ```markdown
-# Product Roadmap
-
 ```{include} ../../../agent-os/product/roadmap.md
 :relative-docs: docs/
 :relative-images:
@@ -189,10 +187,17 @@ Instead of linking directly to raw markdown files outside the docs tree, create 
 
 **File: docs/specifications/index.md**
 
+The landing page should lead with a statement about spec-driven development methodology:
+
 ```markdown
 # Specifications
 
-Introductory paragraph explaining the purpose of this section.
+`project-name` was largely written in a spec-driven development workflow using Claude Code coding agent with
+the [Agent OS](https://buildermethods.com/agent-os) system for SDD.
+
+This section provides access to the product documentation and feature specifications that guide the development of
+`project-name`. Here you can explore the project's mission, roadmap, technology choices, and the detailed specifications
+for each implemented feature.
 
 ## Product
 
@@ -277,7 +282,11 @@ Create scripts to automatically generate both wrapper pages and the specificatio
 For product files, create wrapper pages in `docs/specifications/product/`:
 ```python
 def create_product_wrapper_pages(project_root: Path):
-    """Create wrapper pages with {include} directives for product docs."""
+    """Create wrapper pages with {include} directives for product docs.
+
+    IMPORTANT: Do NOT add a title to wrapper pages - the included source
+    files already have their own titles. Adding one here creates duplicates.
+    """
     product_dir = project_root / "agent-os" / "product"
     wrapper_dir = project_root / "docs" / "specifications" / "product"
     wrapper_dir.mkdir(parents=True, exist_ok=True)
@@ -288,10 +297,8 @@ def create_product_wrapper_pages(project_root: Path):
             # Calculate relative path from wrapper to source
             relative_path = f"../../../agent-os/product/{product_file}"
 
-            # Create wrapper with include directive
-            wrapper_content = f"""# {get_title_from_file(source_path)}
-
-```{{include}} {relative_path}
+            # Create wrapper with include directive ONLY (no title!)
+            wrapper_content = f"""```{{include}} {relative_path}
 :relative-docs: docs/
 :relative-images:
 ```
@@ -519,6 +526,36 @@ ls docs/_build/html/specifications/features/
 - Check that navigation includes Specifications section with proper hierarchy
 
 ## Common Issues
+
+### Duplicate Titles in Rendered Documentation
+
+**Problem:** The same title appears twice in the rendered Sphinx documentation - once from the wrapper page and once from the included source file.
+
+**Cause:** Adding a `# Title` header in the wrapper page when the included source file already has its own `# Title` header.
+
+**Solution:** Wrapper pages should contain ONLY the `{include}` directive - no title. The title comes from the included source file.
+
+```markdown
+<!-- WRONG - causes duplicate titles -->
+# Product Mission
+
+```{include} ../../../agent-os/product/mission.md
+:relative-docs: docs/
+:relative-images:
+```
+
+<!-- CORRECT - title comes from included file only -->
+```{include} ../../../agent-os/product/mission.md
+:relative-docs: docs/
+:relative-images:
+```
+```
+
+**Key Points:**
+- Never add `# Title` headers to wrapper pages
+- The included source files (`agent-os/product/*.md`, `agent-os/specs/*/spec.md`) already have their own titles
+- Wrapper pages are just thin wrappers that pull in the source content
+- If you need to change a title, change it in the source file, not the wrapper
 
 ### Wrapper Page Path Resolution
 

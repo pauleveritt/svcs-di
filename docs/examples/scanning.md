@@ -403,6 +403,6 @@ scan(registry, "myapp.domain", "myapp.application", "myapp.infrastructure")
 
 ## Next Steps
 
-- See [Basic Dataclass](basic_dataclass.md) for dependency injection fundamentals
+- See [Basic Dataclass](basic_injection.md) for dependency injection fundamentals
 - See [Multiple Implementations](multiple_implementations.md) for `ServiceLocator` details
 - See [Protocol Injection](protocol_injection.md) for protocol-based services

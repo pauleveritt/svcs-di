@@ -143,11 +143,15 @@ For complete examples, see:
 """
 
 import functools
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import PurePath
-from typing import cast
+from typing import Any, cast
 
 import svcs
+
+# Type alias for implementations: either a class or a callable factory function
+type Implementation = type | Callable[..., Any]
 
 # ============================================================================
 # Scoring Constants
@@ -198,6 +202,9 @@ Hierarchy operations: Use `.parents` for traversal, `.is_relative_to()` for rela
 class FactoryRegistration:
     """A single implementation registration with service type, optional resource, and optional location.
 
+    The implementation can be either a class or a callable factory function that returns
+    instances of the service type.
+
     The resource represents a business entity type (e.g., Customer, Employee, Product)
     that determines which implementation to use.
 
@@ -206,7 +213,7 @@ class FactoryRegistration:
     """
 
     service_type: type
-    implementation: type
+    implementation: Implementation
     resource: type | None = None
     location: PurePath | None = None
 
@@ -256,7 +263,7 @@ def _resolve_implementation_cached(
     service_type: type,
     resource: type | None,
     location: PurePath | None,
-) -> type | None:
+) -> Implementation | None:
     """
     Cached helper for finding best implementation.
 
@@ -295,7 +302,7 @@ def _resolve_hierarchical_cached(
     registrations: tuple[FactoryRegistration, ...],
     resource: type | None,
     location: PurePath,
-) -> type | None:
+) -> Implementation | None:
     """
     Cached hierarchical location resolution.
 
@@ -333,7 +340,7 @@ def _resolve_hierarchical_cached(
 def _resolve_no_location_cached(
     registrations: tuple[FactoryRegistration, ...],
     resource: type | None,
-) -> type | None:
+) -> Implementation | None:
     """
     Cached resolution without location (standard scoring).
 
@@ -397,10 +404,10 @@ class ServiceLocator:
     def register(
         self,
         service_type: type,
-        implementation: type,
+        implementation: Implementation,
         resource: type | None = None,
         location: PurePath | None = None,
-    ) -> "ServiceLocator":
+    ) -> ServiceLocator:
         """
         Return new ServiceLocator with additional registration (immutable, thread-safe).
 
@@ -454,7 +461,7 @@ class ServiceLocator:
         service_type: type,
         resource: type | None = None,
         location: PurePath | None = None,
-    ) -> type | None:
+    ) -> Implementation | None:
         """
         Find best matching implementation class for a service type using precedence scoring.
 
@@ -545,6 +552,7 @@ from svcs_di.injectors.hopscotch import (  # noqa: E402
 from svcs_di.injectors.scanning import scan  # noqa: E402
 
 __all__ = [
+    "Implementation",
     "Location",
     "FactoryRegistration",
     "ServiceLocator",

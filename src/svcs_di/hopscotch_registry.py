@@ -34,7 +34,7 @@ import attrs
 import svcs
 
 from svcs_di.injectors.hopscotch import HopscotchAsyncInjector, HopscotchInjector
-from svcs_di.injectors.locator import ServiceLocator
+from svcs_di.injectors.locator import Implementation, ServiceLocator
 
 
 @attrs.define
@@ -89,7 +89,7 @@ class HopscotchRegistry(svcs.Registry):
     def register_implementation(
         self,
         service_type: type,
-        implementation: type,
+        implementation: Implementation,
         *,
         resource: type | None = None,
         location: PurePath | None = None,
@@ -103,7 +103,9 @@ class HopscotchRegistry(svcs.Registry):
 
         Args:
             service_type: The service type (interface/protocol) to register for.
-            implementation: The implementation class to register.
+            implementation: The implementation class or callable factory function.
+                For classes, instances are created by calling the class.
+                For functions, instances are created by calling the function.
             resource: Optional resource type for resource-based resolution.
                 When specified, this implementation is only selected when the
                 resource type matches.
@@ -116,6 +118,10 @@ class HopscotchRegistry(svcs.Registry):
             >>> registry = HopscotchRegistry()
             >>> # Default implementation (no context)
             >>> registry.register_implementation(Greeting, DefaultGreeting)
+            >>> # Function factory
+            >>> def create_greeting() -> Greeting:
+            ...     return Greeting("Hello from factory")
+            >>> registry.register_implementation(Greeting, create_greeting)
             >>> # Resource-specific implementation
             >>> registry.register_implementation(Greeting, EmployeeGreeting, resource=EmployeeContext)
             >>> # Location-specific implementation

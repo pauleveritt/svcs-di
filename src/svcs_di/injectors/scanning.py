@@ -21,6 +21,7 @@ See examples/scanning/ for complete examples.
 """
 
 import importlib
+import inspect
 import logging
 import pkgutil
 from types import ModuleType
@@ -31,9 +32,12 @@ import svcs
 from svcs_di import DefaultInjector
 from svcs_di.auto import Injector
 from svcs_di.injectors.decorators import INJECTABLE_METADATA_ATTR, InjectableMetadata
-from svcs_di.injectors.locator import ServiceLocator
+from svcs_di.injectors.locator import Implementation, ServiceLocator
 
 log = logging.getLogger("svcs_di")
+
+# Type alias for decorated items discovered during scanning
+type DecoratedItem = tuple[Implementation, InjectableMetadata]
 
 
 def _is_hopscotch_registry(registry: svcs.Registry) -> bool:
@@ -41,15 +45,20 @@ def _is_hopscotch_registry(registry: svcs.Registry) -> bool:
     return type(registry).__name__ == "HopscotchRegistry"
 
 
-def _create_injector_factory(target_class: type) -> Any:
-    """Create a factory function for a decorated class."""
+def _is_injectable_target(obj: Any) -> bool:
+    """Check if an object is a valid injectable target (class or named function)."""
+    return inspect.isclass(obj) or inspect.isfunction(obj)
+
+
+def _create_injector_factory(target: Implementation) -> Any:
+    """Create a factory function for a decorated class or function."""
 
     def factory(svcs_container: svcs.Container) -> Any:
         try:
             injector = svcs_container.get(Injector)
         except svcs.exceptions.ServiceNotFoundError:
             injector = DefaultInjector(container=svcs_container)
-        return injector(target_class)
+        return injector(target)
 
     return factory
 
@@ -69,42 +78,48 @@ def _get_or_create_locator(registry: svcs.Registry) -> ServiceLocator:
 
 def _register_decorated_items(
     registry: svcs.Registry,
-    decorated_items: list[tuple[type, InjectableMetadata]],
+    decorated_items: list[DecoratedItem],
 ) -> None:
     """Register all decorated items to registry and/or locator."""
     locator = _get_or_create_locator(registry)
     locator_modified = False
     is_hopscotch = _is_hopscotch_registry(registry)
 
-    for decorated_class, metadata in decorated_items:
+    for decorated_target, metadata in decorated_items:
         resource = metadata["resource"]
         location = metadata["location"]
-        # Default to decorated_class if for_ is None
-        service_type = metadata["for_"] or decorated_class
+        for_ = metadata["for_"]
+
+        # For functions, for_ is required. For classes, default to the class itself.
+        if for_ is not None:
+            service_type = for_
+        elif inspect.isclass(decorated_target):
+            service_type = decorated_target
+        else:
+            raise ValueError(
+                f"Function {getattr(decorated_target, '__name__', decorated_target)} "
+                "must specify for_ parameter in @injectable decorator"
+            )
 
         # Use ServiceLocator for:
         # 1. Resource-based registrations (resource != None)
         # 2. Location-based registrations (location != None)
-        # 3. Multi-implementation scenarios (for_ != None, service_type != decorated_class)
-        if (
-            resource is not None
-            or location is not None
-            or service_type != decorated_class
-        ):
+        # 3. Multi-implementation scenarios (for_ explicitly specified)
+        if resource is not None or location is not None or for_ is not None:
             if is_hopscotch:
                 # For HopscotchRegistry, use register_implementation() directly
                 registry.register_implementation(  # type: ignore[attr-defined]
-                    service_type, decorated_class, resource=resource, location=location
+                    service_type, decorated_target, resource=resource, location=location
                 )
             else:
                 locator = locator.register(
-                    service_type, decorated_class, resource=resource, location=location
+                    service_type, decorated_target, resource=resource, location=location
                 )
                 locator_modified = True
         else:
             # Direct registry registration (no resource, no location, no service type override)
-            factory = _create_injector_factory(decorated_class)
-            registry.register_factory(decorated_class, factory)
+            factory = _create_injector_factory(decorated_target)
+            registry.register_factory(service_type, factory)
 
     # For HopscotchRegistry, always ensure the locator is registered as a value
     # so it's accessible via container.get(ServiceLocator)
@@ -178,14 +193,12 @@ def _caller_package(level: int = 2) -> ModuleType | None:
     return module
 
 
-def _scan_locals(
-    frame_locals: dict[str, Any],
-) -> list[tuple[type, InjectableMetadata]]:
-    """Scan local variables for @injectable decorated classes."""
+def _scan_locals(frame_locals: dict[str, Any]) -> list[DecoratedItem]:
+    """Scan local variables for @injectable decorated classes and functions."""
     return [
         (obj, getattr(obj, INJECTABLE_METADATA_ATTR))
         for obj in frame_locals.values()
-        if isinstance(obj, type) and hasattr(obj, INJECTABLE_METADATA_ATTR)
+        if _is_injectable_target(obj) and hasattr(obj, INJECTABLE_METADATA_ATTR)
     ]
 
 
@@ -249,15 +262,13 @@ def _discover_all_modules(modules_to_scan: list[ModuleType]) -> list[ModuleType]
     return discovered
 
 
-def _extract_decorated_items(
-    module: ModuleType,
-) -> list[tuple[type, InjectableMetadata]]:
-    """Extract @injectable decorated classes from a module."""
-    items: list[tuple[type, InjectableMetadata]] = []
+def _extract_decorated_items(module: ModuleType) -> list[DecoratedItem]:
+    """Extract @injectable decorated classes and functions from a module."""
+    items: list[DecoratedItem] = []
     for attr_name in dir(module):
         try:
             attr = getattr(module, attr_name)
-            if isinstance(attr, type) and hasattr(attr, INJECTABLE_METADATA_ATTR):
+            if _is_injectable_target(attr) and hasattr(attr, INJECTABLE_METADATA_ATTR):
                 metadata = getattr(attr, INJECTABLE_METADATA_ATTR)
                 items.append((attr, metadata))
         except (AttributeError, ImportError):
@@ -265,9 +276,7 @@ def _extract_decorated_items(
     return items
 
 
-def _collect_decorated_items(
-    modules: list[ModuleType],
-) -> list[tuple[type, InjectableMetadata]]:
+def _collect_decorated_items(modules: list[ModuleType]) -> list[DecoratedItem]:
     """Collect all @injectable decorated items from modules."""
     return [item for module in modules for item in _extract_decorated_items(module)]
 

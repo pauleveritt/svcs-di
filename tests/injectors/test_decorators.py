@@ -1,6 +1,7 @@
 """Tests for @injectable decorator."""
 
 from dataclasses import dataclass
+from typing import Any, get_type_hints
 
 from svcs_di.injectors.decorators import injectable
 
@@ -19,7 +20,7 @@ class TestContext:
 
 
 # ============================================================================
-# @injectable Decorator Tests
+# @injectable Decorator Tests - Classes
 # ============================================================================
 
 
@@ -230,19 +231,8 @@ def test_injectable_multiple_implementations_same_for():
 
 
 # ============================================================================
-# @injectable Decorator Error Tests
+# @injectable Decorator Tests - Plain Classes
 # ============================================================================
-
-
-def test_injectable_rejects_function():
-    """Test that @injectable raises TypeError when applied to a function."""
-    import pytest
-
-    with pytest.raises(TypeError, match="can only be applied to classes"):
-
-        @injectable  # type: ignore[arg-type]
-        def some_function():
-            pass
 
 
 def test_injectable_accepts_plain_class():
@@ -262,3 +252,122 @@ def test_injectable_accepts_plain_class():
     # Verify class works normally
     instance = PlainService("test")
     assert instance.name == "test"
+
+
+# ============================================================================
+# @injectable Decorator Tests - Functions (Task Group 1)
+# ============================================================================
+
+
+class Greeting:
+    """Service type for function factory tests."""
+
+    def __init__(self, message: str = "Hello"):
+        self.message = message
+
+
+def test_injectable_bare_decorator_on_function():
+    """Test @injectable bare decorator on a function factory."""
+
+    @injectable
+    def create_greeting() -> Greeting:
+        return Greeting("Hello from factory")
+
+    # Check metadata is stored on function
+    assert hasattr(create_greeting, "__injectable_metadata__")
+    metadata: dict[str, Any] = create_greeting.__injectable_metadata__  # type: ignore[attr-defined]
+    assert metadata["for_"] is None
+    assert metadata["resource"] is None
+
+    # Function should still work normally
+    result = create_greeting()
+    assert isinstance(result, Greeting)
+    assert result.message == "Hello from factory"
+
+
+def test_injectable_with_explicit_for_on_function():
+    """Test @injectable(for_=X) with explicit service type on a function."""
+
+    @injectable(for_=Greeting)
+    def create_custom_greeting() -> Greeting:
+        return Greeting("Custom greeting")
+
+    # Check metadata stores for_
+    assert hasattr(create_custom_greeting, "__injectable_metadata__")
+    metadata: dict[str, Any] = create_custom_greeting.__injectable_metadata__  # type: ignore[attr-defined]
+    assert metadata["for_"] is Greeting
+    assert metadata["resource"] is None
+
+
+def test_injectable_with_for_and_resource_on_function():
+    """Test @injectable(for_=X, resource=Y) with resource context on a function."""
+
+    @injectable(for_=Greeting, resource=CustomerContext)
+    def create_customer_greeting() -> Greeting:
+        return Greeting("Welcome, valued customer!")
+
+    # Check metadata stores both for_ and resource
+    assert hasattr(create_customer_greeting, "__injectable_metadata__")
+    metadata: dict[str, Any] = create_customer_greeting.__injectable_metadata__  # type: ignore[attr-defined]
+    assert metadata["for_"] is Greeting
+    assert metadata["resource"] is CustomerContext
+
+
+def test_injectable_return_type_inference_for_function():
+    """Test return type inference when for_ is not specified on a function."""
+
+    @injectable
+    def create_inferred_greeting() -> Greeting:
+        return Greeting("Inferred type")
+
+    # Check metadata is stored
+    assert hasattr(create_inferred_greeting, "__injectable_metadata__")
+    metadata: dict[str, Any] = create_inferred_greeting.__injectable_metadata__  # type: ignore[attr-defined]
+
+    # for_ should be None (inference happens at registration time, not decoration time)
+    assert metadata["for_"] is None
+    assert metadata["resource"] is None
+
+    # The return type should be extractable via get_type_hints
+    hints = get_type_hints(create_inferred_greeting)
+    assert hints.get("return") is Greeting
+
+
+def test_injectable_class_behavior_unchanged():
+    """Test that existing class decorator behavior remains unchanged after function support."""
+
+    class ServiceBase:
+        pass
+
+    @injectable(for_=ServiceBase, resource=EmployeeContext)
+    @dataclass
+    class ServiceImpl:
+        name: str = "default"
+
+    # Check metadata is stored correctly for class
+    assert hasattr(ServiceImpl, "__injectable_metadata__")
+    metadata = ServiceImpl.__injectable_metadata__
+    assert metadata["for_"] is ServiceBase
+    assert metadata["resource"] is EmployeeContext
+
+    # Class should work normally
+    instance = ServiceImpl(name="test")
+    assert instance.name == "test"
+
+
+def test_injectable_async_function():
+    """Test @injectable on async function factory."""
+    import inspect
+
+    @injectable(for_=Greeting)
+    async def create_async_greeting() -> Greeting:
+        return Greeting("Async greeting")
+
+    # Check metadata is stored
+    assert hasattr(create_async_greeting, "__injectable_metadata__")
+    metadata: dict[str, Any] = create_async_greeting.__injectable_metadata__  # type: ignore[attr-defined]
+    assert metadata["for_"] is Greeting
+    assert metadata["resource"] is None
+
+    # Function should be detectable as async
+    assert inspect.iscoroutinefunction(create_async_greeting)

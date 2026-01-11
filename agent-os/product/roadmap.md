@@ -65,10 +65,10 @@
     Otherwise, find the registered injector and use it. But make sure it supports keyword injection. For example,
     `container = InjectorContainer(container); container.get(MyService, arg1=val1, arg2=val2)`. Write good tests. `M`
 
-15. [ ] Hopscotch Registry — Provide HopscotchRegistry and HopscotchContainer as pre-wired implementations. Read
+15. [x] Hopscotch Registry — Provide HopscotchRegistry and HopscotchContainer as pre-wired implementations. Read
     `docs/hopscotch_registry_plan.md` for instructions.
 
-16. [ ] Function Implementations — Read `docs/function_implementations_plan.md` for instructions. Allow factories to be
+16. [x] Function Implementations — Read `docs/function_implementations_plan.md` for instructions. Allow factories to be
     functions, both for manual registrations and decorator. Have examples for DefaultInjector, KeywordInjector, and
     HopscotchInjector, plus docs for the examples.
 

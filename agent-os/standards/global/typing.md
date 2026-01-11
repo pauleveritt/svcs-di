@@ -23,3 +23,25 @@ See [Tooling Standards](./tooling.md) for details on using ty via skills.
   - `def _should_process_href(href: str | None) -> TypeGuard[str]:`
   - Benefit: The type checker knows href is str after check
 - Avoid circular imports on type hints by using the `if TYPE_CHECKING` guard
+
+## Semantic Type Aliases
+
+Prefer semantically meaningful `type =` definitions over inline complex types. This improves readability and documents intent:
+
+```python
+# Good: Semantic type aliases convey meaning
+type InjectionTarget[T] = type[T] | Callable[..., T]
+type ResolutionResult = tuple[bool, Any]
+type SvcsFactory[T] = Callable[..., T]
+
+def resolve(target: InjectionTarget[T]) -> ResolutionResult: ...
+
+# Avoid: Inline complex types obscure intent
+def resolve(target: type[T] | Callable[..., T]) -> tuple[bool, Any]: ...
+```
+
+Benefits:
+- **Self-documenting**: The alias name explains the purpose
+- **Reusable**: Define once, use consistently throughout codebase
+- **Refactorable**: Change the definition in one place
+- **Type checker friendly**: Works well with ty and other checkers

@@ -18,7 +18,7 @@ Example:
     >>> service = container.inject(MyService, some_dep=override_value)
 """
 
-from typing import Any
+from typing import Any, Self
 
 import attrs
 import svcs
@@ -60,6 +60,14 @@ class InjectorContainer(svcs.Container):
         default=KeywordAsyncInjector,
         kw_only=True,
     )
+
+    def __enter__(self) -> Self:
+        """Return self with correct type for context manager usage."""
+        return self
+
+    async def __aenter__(self) -> Self:
+        """Return self with correct type for async context manager usage."""
+        return self
 
     def inject[T](self, svc_type: type[T], /, **kwargs: Any) -> T:
         """

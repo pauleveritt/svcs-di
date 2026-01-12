@@ -193,5 +193,7 @@ def test_mixed_class_and_function_registrations():
     assert default_impl is DefaultGreeting
 
     # With resource should return function
-    customer_impl = registry.locator.get_implementation(Greeting, resource=CustomerContext)
+    customer_impl = registry.locator.get_implementation(
+        Greeting, resource=CustomerContext
+    )
     assert customer_impl is create_customer_greeting

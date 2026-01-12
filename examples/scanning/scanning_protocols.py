@@ -95,9 +95,10 @@ def main() -> UserService:
 
     # inject() resolves Inject[Protocol] fields to implementations
     service = container.inject(UserService)
-    assert service.repo.db.host == "localhost"
-    assert service.repo.db.port == 5432
-    assert service.repo.cache.ttl == 300
+    # Accessing implementation details for verification (not typical in production code)
+    assert service.repo.db.host == "localhost"  # ty: ignore[unresolved-attribute]
+    assert service.repo.db.port == 5432  # ty: ignore[unresolved-attribute]
+    assert service.repo.cache.ttl == 300  # ty: ignore[unresolved-attribute]
     assert "User 42" in service.find_user(42)
 
     return service

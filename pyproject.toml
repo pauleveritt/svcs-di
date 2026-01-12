@@ -37,7 +37,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src", "docs"]
+testpaths = ["tests", "src"]
 python_files = ["test_*.py"]
 addopts = "-p no:doctest -m \"not slow\""
 pythonpath = ["examples"]
@@ -48,6 +48,9 @@ markers = [
 # Free-threading safety: timeout tests to detect hangs/deadlocks
 timeout = 60
 faulthandler_timeout = 120
+
+[tool.ty.environment]
+extra-paths = ["examples/scanning"]
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]

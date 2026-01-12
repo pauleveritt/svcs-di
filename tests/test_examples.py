@@ -1,7 +1,8 @@
 """Tests that verify all examples work correctly."""
 
-import asyncio
 import importlib.util
+import inspect
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -9,6 +10,11 @@ import anyio
 import pytest
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
+
+# Add examples/scanning to sys.path for nested_app imports
+scanning_path = str(EXAMPLES_DIR / "scanning")
+if scanning_path not in sys.path:
+    sys.path.insert(0, scanning_path)
 
 
 def get_example_modules() -> list[ModuleType]:
@@ -48,9 +54,9 @@ def test_example_runs_without_error(example_module):
     main_func = getattr(example_module, "main")
 
     # Check if main is async
-    if asyncio.iscoroutinefunction(main_func):
+    if inspect.iscoroutinefunction(main_func):
         # Run async main
-        anyio.run(main_func, tuple())
+        anyio.run(main_func)
     else:
         # Run sync main
         main_func()

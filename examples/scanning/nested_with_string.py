@@ -21,24 +21,24 @@ from dataclasses import dataclass
 from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
 from svcs_di.injectors.scanning import scan
 
-from nested_app.protocols import Email, UserRepository
 
-
-@dataclass
-class AppService:
-    """Application service that depends on protocols."""
-
-    repo: Inject[UserRepository]
-    email: Inject[Email]
-
-    def welcome_user(self, user_id: int) -> str:
-        user = self.repo.get_user(user_id)
-        self.email.send("admin@example.com", "User Login", f"{user} logged in")
-        return user
-
-
-def main() -> AppService:
+def main():
     """Demonstrate nested package scanning with protocols."""
+    # Import protocols inside main() to ensure we get fresh types after any module reloads
+    from nested_app.protocols import Email, UserRepository
+
+    @dataclass
+    class AppService:
+        """Application service that depends on protocols."""
+
+        repo: Inject[UserRepository]
+        email: Inject[Email]
+
+        def welcome_user(self, user_id: int) -> str:
+            user = self.repo.get_user(user_id)
+            self.email.send("admin@example.com", "User Login", f"{user} logged in")
+            return user
+
     # HopscotchRegistry manages protocol-to-implementation mappings
     registry = HopscotchRegistry()
 

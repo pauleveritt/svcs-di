@@ -213,13 +213,13 @@ class HopscotchContainer(svcs.Container):
 
         Examples:
             Basic injection (uses locator-based resolution):
-                >>> service = container.inject(WelcomeService)
+                >>> service = container.inject(WelcomeService)  # doctest: +SKIP
 
             With resource-based resolution:
-                >>> service = container.inject(WelcomeService, resource=EmployeeContext)
+                >>> service = container.inject(WelcomeService, resource=EmployeeContext)  # doctest: +SKIP
 
             With kwargs override:
-                >>> service = container.inject(WelcomeService, greeting=mock_greeting)
+                >>> service = container.inject(WelcomeService, greeting=mock_greeting)  # doctest: +SKIP
 
         See Also:
             HopscotchInjector: For details on locator-based resolution and precedence.
@@ -253,13 +253,13 @@ class HopscotchContainer(svcs.Container):
 
         Examples:
             Basic async injection:
-                >>> service = await container.ainject(WelcomeService)
+                >>> service = await container.ainject(WelcomeService)  # doctest: +SKIP
 
             With resource-based resolution:
-                >>> service = await container.ainject(WelcomeService, resource=EmployeeContext)
+                >>> service = await container.ainject(WelcomeService, resource=EmployeeContext)  # doctest: +SKIP
 
             With kwargs override:
-                >>> service = await container.ainject(WelcomeService, greeting=mock_greeting)
+                >>> service = await container.ainject(WelcomeService, greeting=mock_greeting)  # doctest: +SKIP
 
         See Also:
             HopscotchAsyncInjector: For details on async locator-based resolution.

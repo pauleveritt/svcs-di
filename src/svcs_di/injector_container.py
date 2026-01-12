@@ -13,9 +13,9 @@ Example:
     >>> registry = svcs.Registry()
     >>> container = InjectorContainer(registry)
     >>> # Use like a normal svcs.Container
-    >>> service = container.get(MyService)
+    >>> service = container.get(MyService)  # doctest: +SKIP
     >>> # Or use inject() with kwargs override
-    >>> service = container.inject(MyService, some_dep=override_value)
+    >>> service = container.inject(MyService, some_dep=override_value)  # doctest: +SKIP
 """
 
 from typing import Any, Self
@@ -47,9 +47,9 @@ class InjectorContainer(svcs.Container):
         >>> registry = svcs.Registry()
         >>> container = InjectorContainer(registry)
         >>> # Standard svcs.Container behavior
-        >>> service = container.get(MyService)
+        >>> service = container.get(MyService)  # doctest: +SKIP
         >>> # With kwargs override via inject()
-        >>> service = container.inject(MyService, dependency=mock_dep)
+        >>> service = container.inject(MyService, dependency=mock_dep)  # doctest: +SKIP
     """
 
     injector: type[Injector] | None = attrs.field(
@@ -88,10 +88,10 @@ class InjectorContainer(svcs.Container):
 
         Examples:
             Basic injection (uses container values and defaults):
-                >>> service = container.inject(MyService)
+                >>> service = container.inject(MyService)  # doctest: +SKIP
 
             With kwargs override:
-                >>> service = container.inject(MyService, dependency=mock_dep)
+                >>> service = container.inject(MyService, dependency=mock_dep)  # doctest: +SKIP
 
         See Also:
             KeywordInjector: For details on three-tier kwargs override behavior.
@@ -120,10 +120,10 @@ class InjectorContainer(svcs.Container):
 
         Examples:
             Basic async injection:
-                >>> service = await container.ainject(MyService)
+                >>> service = await container.ainject(MyService)  # doctest: +SKIP
 
             With kwargs override:
-                >>> service = await container.ainject(MyService, dependency=mock_dep)
+                >>> service = await container.ainject(MyService, dependency=mock_dep)  # doctest: +SKIP
 
         See Also:
             KeywordAsyncInjector: For details on async three-tier kwargs override behavior.

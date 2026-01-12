@@ -43,8 +43,8 @@ Locations follow a hierarchical fallback pattern:
 - Falls back to default (no location constraint)
 
 ```{literalinclude} ../../examples/hopscotch/location_resolution.py
-:start-at: Test 2: Hierarchical fallback
-:end-at: "Thanks for visiting" in service.render
+:start-at: "Hierarchical fallback"
+:end-at: 'assert "Thanks for visiting" in service.render("Bob")'
 ```
 
 ### Location as Injectable Service

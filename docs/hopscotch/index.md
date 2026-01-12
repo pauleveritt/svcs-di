@@ -3,7 +3,7 @@
 The `HopscotchInjector` extends dependency injection with resource-based and location-based resolution. This allows
 multiple implementations of the same service type, with the correct one selected based on context.
 
-### Why?
+## Why?
 
 Imagine a broad ecosystem of quality, cross-framework web themes, components, and tooling. A site might want to replace
 just one component. Or replace, but only in parts of the site.

@@ -56,7 +56,7 @@ Here is a minimal doctest-compatible example:
 The `DefaultInjector` can call functions directly, resolving `Inject[T]` parameters:
 
 ```{literalinclude} ../../examples/function/default_injector.py
-:start-at: # Call the factory function directly
+:start-at: Call the factory function directly
 :end-at: greeting = injector(create_greeting)
 ```
 
@@ -65,7 +65,7 @@ The `DefaultInjector` can call functions directly, resolving `Inject[T]` paramet
 Function factories can be registered in `HopscotchRegistry` for ServiceLocator-based resolution:
 
 ```{literalinclude} ../../examples/function/default_injector.py
-:start-at: # Setup HopscotchRegistry and register services
+:start-at: Setup HopscotchRegistry and register services
 :end-at: registry.register_implementation(Greeting, create_greeting)
 ```
 

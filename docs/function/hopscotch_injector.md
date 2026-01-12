@@ -20,51 +20,104 @@ The complete example is available at `examples/function/hopscotch_injector.py`:
 Here is a minimal doctest-compatible example showing resource-based resolution:
 
 ```python
->>> from dataclasses import dataclass
->>> from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
+>> > from dataclasses import dataclass
+>> > from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
 
->>> class CustomerContext:
-...     """Resource type for customer requests."""
+>> >
 
->>> @dataclass
-... class Database:
-...     host: str = "localhost"
+class CustomerContext:
 
->>> @dataclass
-... class Greeting:
-...     salutation: str = "Hello"
-...     source: str = "default"
 
->>> @dataclass
-... class WelcomeService:
-...     greeting: Inject[Greeting]
-...     def welcome(self, name: str) -> str:
-...         return f"{self.greeting.salutation}, {name}!"
+    ...
+"""Resource type for customer requests."""
 
->>> def create_default_greeting(db: Inject[Database]) -> Greeting:
-...     return Greeting(salutation="Hello", source="default")
+>> >
 
->>> def create_customer_greeting(db: Inject[Database]) -> Greeting:
-...     return Greeting(salutation="Welcome, valued customer", source="customer")
+@dataclass
 
->>> registry = HopscotchRegistry()
->>> registry.register_implementation(Database, Database)
->>> registry.register_implementation(Greeting, create_default_greeting)
->>> registry.register_implementation(
-...     Greeting, create_customer_greeting, resource=CustomerContext
+
+...
+
+
+class Database:
+
+
+    ...
+host: str = "localhost"
+
+>> >
+
+@dataclass
+
+
+...
+
+
+class Greeting:
+
+
+    ...
+salutation: str = "Hello"
+...
+source: str = "default"
+
+>> >
+
+@dataclass
+
+
+...
+
+
+class WelcomeService:
+
+
+    ...
+greeting: Inject[Greeting]
+...
+
+
+def welcome(self, name: str) -> str:
+
+
+    ...
+return f"{self.greeting.salutation}, {name}!"
+
+>> >
+
+def create_default_greeting(db: Inject[Database]) -> Greeting:
+
+
+    ...
+return Greeting(salutation="Hello", source="default")
+
+>> >
+
+def create_customer_greeting(db: Inject[Database]) -> Greeting:
+
+
+    ...
+return Greeting(salutation="Welcome, valued customer", source="customer")
+
+>> > registry = HopscotchRegistry()
+>> > registry.register_implementation(Database, Database)
+>> > registry.register_implementation(Greeting, create_default_greeting)
+>> > registry.register_implementation(
+    ...
+Greeting, create_customer_greeting, resource = CustomerContext
 ... )
 
->>> # Without resource context - gets default factory
->>> container = HopscotchContainer(registry)
->>> service = container.inject(WelcomeService)
->>> service.greeting.source
+>> >  # Without resource context - gets default factory
+>> > container = HopscotchContainer(registry)
+>> > service = container.inject(WelcomeService)
+>> > service.greeting.source
 'default'
 
->>> # With CustomerContext - gets customer factory
->>> registry.register_value(CustomerContext, CustomerContext())
->>> container = HopscotchContainer(registry)
->>> service = container.inject(WelcomeService, resource=CustomerContext)
->>> service.greeting.source
+>> >  # With CustomerContext - gets customer factory
+>> > registry.register_value(CustomerContext, CustomerContext())
+>> > container = HopscotchContainer(registry)
+>> > service = container.inject(WelcomeService, resource=CustomerContext)
+>> > service.greeting.source
 'customer'
 
 ```
@@ -77,7 +130,7 @@ The `HopscotchInjector` uses a `ServiceLocator` that can hold multiple implement
 When resolving `Inject[T]` fields, the locator selects the appropriate implementation based on context:
 
 ```{literalinclude} ../../examples/function/hopscotch_injector.py
-:start-at: # Register multiple Greeting factories
+:start-at: Register multiple Greeting factories
 :end-at: registry.register_implementation(
 ```
 
@@ -108,7 +161,7 @@ Functions can use `@injectable` with both `for_` and `resource` parameters:
 The `scan()` function discovers decorated functions and registers them with appropriate constraints:
 
 ```{literalinclude} ../../examples/function/hopscotch_injector.py
-:start-at: # Scan discovers all @injectable decorated functions
+:start-at: Scan discovers all @injectable decorated functions
 :end-at: },
 ```
 

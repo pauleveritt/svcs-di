@@ -1,6 +1,7 @@
 # Multiple Service Implementations
 
-This guide demonstrates how to register and resolve multiple implementations for the same service type using **ServiceLocator** and **HopscotchInjector**.
+This guide demonstrates how to register and resolve multiple implementations for the same service type using *
+*ServiceLocator** and **HopscotchInjector**.
 
 ## Overview
 
@@ -34,6 +35,7 @@ Inject field resolution with locator support.
 ```python
 from dataclasses import dataclass
 
+
 class Greeting:
     """Service protocol."""
     salutation: str
@@ -49,9 +51,11 @@ class Greeting:
 class DefaultGreeting(Greeting):
     salutation: str = "Hello"
 
+
 @dataclass
 class EmployeeGreeting(Greeting):
     salutation: str = "Hey"
+
 
 @dataclass
 class CustomerGreeting(Greeting):
@@ -65,9 +69,11 @@ class RequestContext:
     """Base context."""
     pass
 
+
 class EmployeeContext(RequestContext):
     """Context for employee requests."""
     pass
+
 
 class CustomerContext(RequestContext):
     """Context for customer requests."""
@@ -99,12 +105,14 @@ from dataclasses import dataclass
 from svcs_di.auto import Inject
 from svcs_di.injectors.locator import HopscotchInjector
 
+
 @dataclass
 class WelcomeService:
     greeting: Inject[Greeting]
 
     def welcome(self, name: str) -> str:
         return self.greeting.greet(name)
+
 
 # Setup container with context
 registry.register_value(RequestContext, EmployeeContext())
@@ -136,6 +144,7 @@ class AdminContext(EmployeeContext):
     """Admin inherits from Employee."""
     pass
 
+
 # Subclass match: issubclass(AdminContext, EmployeeContext)
 registry.register_value(RequestContext, AdminContext())
 # Resolves to: EmployeeGreeting (subclass match)
@@ -151,7 +160,8 @@ injector = HopscotchInjector(container=container)  # No context_key
 
 ## LIFO Ordering
 
-Later registrations override earlier ones - the example below is conceptual (see `examples/multiple_implementations.py` for runnable code):
+Later registrations override earlier ones - the example below is conceptual (see `examples/multiple_implementations.py`
+for runnable code):
 
 ```text
 locator = ServiceLocator()
@@ -166,13 +176,15 @@ locator = locator.register(Greeting, SiteGreeting)
 ```
 
 This allows:
+
 - System-level defaults
 - Application-level overrides
 - Site/tenant-specific customization
 
 ## Kwargs Override
 
-Kwargs have the highest precedence, overriding locator and container.  See `examples/multiple_implementations.py` for complete runnable example.
+Kwargs have the highest precedence, overriding locator and container. See `examples/multiple_implementations.py` for
+complete runnable example.
 
 ```text
 injector = HopscotchInjector(container=container, resource=RequestContext)
@@ -186,6 +198,7 @@ service2 = injector(WelcomeService, greeting=custom_greeting)
 ```
 
 Precedence order:
+
 1. **Kwargs** (highest) - Explicit overrides
 2. **Locator** (medium) - Context-based selection
 3. **Container** (medium) - Standard svcs resolution
@@ -208,6 +221,7 @@ service = injector(WelcomeService)  # Works seamlessly
 ```
 
 Resolution flow:
+
 1. Try ServiceLocator if registered
 2. Fall back to container.get() if no locator
 3. Fall back to default values if not in container
@@ -360,23 +374,6 @@ locator = locator.register(Dashboard, UserDashboard, resource=UserContext)
 locator = locator.register(Dashboard, AdminDashboard, resource=AdminContext)
 ```
 
-## Complete Example
-
-See [`examples/multiple_implementations.py`](../../examples/multiple_implementations.py) for a complete working example demonstrating:
-
-- Multiple implementations per service type
-- Resource-based resolution
-- Three-tier precedence
-- LIFO override behavior
-- Kwargs override
-- Fallback behavior
-
-Run the example:
-
-```bash
-uv run python examples/multiple_implementations.py
-```
-
 ## API Reference
 
 ### ServiceLocator
@@ -427,12 +424,14 @@ Async version using `aget()` and `aget_abstract()`.
 ### vs. Factory Pattern
 
 **ServiceLocator + HopscotchInjector:**
+
 - ✅ Declarative registration
 - ✅ Automatic dependency injection
 - ✅ Three-tier precedence built-in
 - ✅ LIFO override behavior
 
 **Factory Pattern:**
+
 - ⚠️ Manual factory implementation
 - ⚠️ Explicit dependency passing
 - ⚠️ Custom precedence logic needed
@@ -440,11 +439,13 @@ Async version using `aget()` and `aget_abstract()`.
 ### vs. svcs Standard Pattern
 
 **ServiceLocator + HopscotchInjector:**
+
 - ✅ Multiple implementations per type
 - ✅ Context-based selection
 - ✅ Dynamic resolution
 
 **svcs Standard:**
+
 - ⚠️ One implementation per type
 - ⚠️ Static registration
 - ⚠️ Container-local overrides only
@@ -452,12 +453,14 @@ Async version using `aget()` and `aget_abstract()`.
 ### vs. Original HopscotchRegistry
 
 **Current Implementation (Simplified):**
+
 - ✅ ~240 lines total
 - ✅ Flat structure
 - ✅ Type-only registration
 - ✅ Clear semantics
 
 **Original HopscotchRegistry:**
+
 - ⚠️ ~400+ lines
 - ⚠️ Nested storage
 - ⚠️ Singleton vs class complexity
@@ -555,11 +558,3 @@ locator = locator.register(Greeting, DefaultGreeting)
 locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeContext)
 registry.register_value(ServiceLocator, locator)
 ```
-
-## Related Documentation
-
-- [Basic Dependency Injection](basic_injection.md)
-- [Protocol Injection](./protocol_injection.md)
-- [Async Injection](./async_injection.md)
-- [Keyword Arguments Override](./kwargs_override.md)
-- [Custom Injectors](./custom_injector.md)

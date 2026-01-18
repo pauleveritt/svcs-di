@@ -11,22 +11,3 @@ This Skill provides Claude Code with specific guidance on how to adhere to codin
 
 For details, refer to the information provided in this file:
 [global tooling](../../../agent-os/standards/global/tooling.md)
-
-## Quick Reference
-
-### Astral Tools - Use Skills, Not Bash
-
-- **uv:** `Skill(skill="astral:uv", args="...")`
-- **ty:** `Skill(skill="astral:ty", args="...")` (but trust LSP diagnostics first)
-- **ruff:** `Skill(skill="astral:ruff", args="...")`
-
-### Code Exploration - Use LSP, Not Grep
-
-- `LSP(operation="goToDefinition", ...)` - Find definitions
-- `LSP(operation="findReferences", ...)` - Find usages
-- `LSP(operation="hover", ...)` - Get type info
-- `LSP(operation="documentSymbol", ...)` - List symbols
-
-### Trust the LSP
-
-Real-time diagnostics appear in `<new-diagnostics>` blocks. Don't run redundant type checks.

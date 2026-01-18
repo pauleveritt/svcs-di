@@ -195,9 +195,29 @@ pythonpath = ["examples"]  # If you have example code to import
 - **`-p no:doctest`** disables pytest's built-in doctest plugin
 - **`pythonpath`** adds directories needed for test imports
 
-### Step 5: Justfile Recipes
+### Step 5: Running Doctests
 
-**File**: `Justfile`
+**Agent OS MUST use Astral skills to run doctests, NOT Just recipes or Bash.**
+
+#### Running Doctests with Astral Skills
+
+```python
+# Test source code docstrings
+Skill(skill="astral:uv", args="run pytest src/")
+
+# Test README and docs
+Skill(skill="astral:uv", args="run pytest docs/ README.md")
+
+# Test everything
+Skill(skill="astral:uv", args="run pytest src/ docs/ README.md")
+
+# Verbose output
+Skill(skill="astral:uv", args="run pytest src/ -v")
+```
+
+#### Justfile Recipes (For Manual/CI Use Only)
+
+The following Just recipes exist for manual command-line use and CI pipelines:
 
 ```just
 # Run doctest examples via Sybil integration with pytest
@@ -213,7 +233,7 @@ test-all-doctests *ARGS:
     uv run pytest src/ docs/ README.md {{ ARGS }}
 ```
 
-**Usage:**
+**Manual usage (NOT for Agent OS):**
 ```bash
 just test-doctest          # Test source code docstrings
 just test-docs             # Test README and docs
@@ -302,16 +322,30 @@ python -m doctest src/package/*.py -v
 
 ## Verification
 
-### Check Installation
-```bash
+### Check Installation (Agent OS)
+
+```python
 # Verify Sybil is installed
-uv run python -c "import sybil; print(sybil.__version__)"
+Skill(skill="astral:uv", args="run python -c \"import sybil; print(sybil.__version__)\"")
 
 # Check pytest finds Sybil tests
-uv run pytest src/ docs/ README.md --collect-only
+Skill(skill="astral:uv", args="run pytest src/ docs/ README.md --collect-only")
 ```
 
-### Run Tests
+### Run Tests (Agent OS)
+
+```python
+# All doctests
+Skill(skill="astral:uv", args="run pytest src/ docs/ README.md")
+
+# Source code with verbose
+Skill(skill="astral:uv", args="run pytest src/ -v")
+
+# Filter by pattern
+Skill(skill="astral:uv", args="run pytest docs/ -k \"Quick Start\"")
+```
+
+### Manual Verification (NOT for Agent OS)
 ```bash
 just test-all-doctests           # All doctests
 just test-doctest -v             # Source code with verbose
@@ -362,7 +396,22 @@ def pytest_collect_file(file_path, parent):
 
 This allows combining multiple Sybil configurations in a single conftest.
 
-### Pattern 3: Justfile Test Organization
+### Pattern 3: Doctest Organization
+
+**Agent OS should run doctests with targeted Astral skill invocations:**
+
+```python
+# Just source code doctests
+Skill(skill="astral:uv", args="run pytest src/")
+
+# Just documentation doctests
+Skill(skill="astral:uv", args="run pytest docs/ README.md")
+
+# All doctests
+Skill(skill="astral:uv", args="run pytest src/ docs/ README.md")
+```
+
+**For manual/CI use, Justfile recipes are available:**
 
 ```just
 test-doctest *ARGS:        # Just source code
@@ -374,8 +423,6 @@ test-docs *ARGS:           # Just documentation
 test-all-doctests *ARGS:   # Everything
     uv run pytest src/ docs/ README.md {{ ARGS }}
 ```
-
-Separate recipes for different workflows.
 
 ## Troubleshooting
 

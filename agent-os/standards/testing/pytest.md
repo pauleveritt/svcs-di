@@ -1,11 +1,45 @@
 # Testing Standards
 
-*ALWAYS* run pytest via the `uv` skill using the `Skill` tool: `Skill(skill="astral:uv", args="run pytest")`.
+## Running Tests - ALWAYS Use Astral uv Skill
 
-**Don't:**
-- Run `uv run pytest` via Bash
-- Run `python` or `pytest` directly
-- Use `just test` command
+**All tests MUST be run via the Astral `uv` skill.** Never use Bash or Just.
+
+### Correct Way to Run Tests
+
+```python
+# Run all tests
+Skill(skill="astral:uv", args="run pytest")
+
+# Run tests in a specific directory
+Skill(skill="astral:uv", args="run pytest tests/")
+
+# Run a specific test file
+Skill(skill="astral:uv", args="run pytest tests/test_user.py")
+
+# Run a specific test function
+Skill(skill="astral:uv", args="run pytest tests/test_user.py::test_login")
+
+# Run with verbose output
+Skill(skill="astral:uv", args="run pytest -v")
+
+# Run with coverage
+Skill(skill="astral:uv", args="run pytest --cov=src")
+
+# Run only tests matching a pattern
+Skill(skill="astral:uv", args="run pytest -k \"login\"")
+
+# Run doctests
+Skill(skill="astral:uv", args="run pytest src/ docs/ README.md")
+```
+
+### ❌ WRONG - Never Do This
+
+```python
+Bash("uv run pytest")           # WRONG - don't use Bash
+Bash("pytest tests/")           # WRONG - don't use Bash
+Bash("python -m pytest")        # WRONG - don't use Bash
+Bash("just test")               # WRONG - don't use Just
+```
 
 ## Test Structure
 

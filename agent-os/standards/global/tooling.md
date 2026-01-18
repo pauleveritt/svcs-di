@@ -1,9 +1,10 @@
 # Python Tooling
 
-## Astral Tools via Skills
+## Astral Plugin for Claude Code
 
-This project uses Astral's modern Python tooling suite. **Always invoke these tools via their skills, not via bash
-commands.**
+This project uses the **Astral plugin for Claude Code** (`astral@astral-sh`), which provides skills for Python development tools. The plugin also configures the **ty LSP** for real-time type checking.
+
+**CRITICAL: Always invoke Astral tools via the plugin skills, NEVER via Bash commands.**
 
 ### Available Astral Skills
 
@@ -103,68 +104,125 @@ LSP(operation="goToDefinition", filePath="myfile.py", line=10, character=15)
 LSP(operation="documentSymbol", filePath=".venv/lib/.../svcs/_core.py", line=1, character=1)
 ```
 
-## When to Use Bash vs Skills
+## When to Use Skills vs Bash
 
-### Use Skills for:
+### ALWAYS Use Astral Skills For:
 
-- `uv` commands (package management, running scripts, **testing with pytest**)
-- `ty` type checking (when needed beyond LSP)
-- `ruff` linting/formatting
+| Task | Skill Invocation |
+|------|------------------|
+| Running Python scripts | `Skill(skill="astral:uv", args="run script.py")` |
+| Running pytest | `Skill(skill="astral:uv", args="run pytest tests/")` |
+| Adding packages | `Skill(skill="astral:uv", args="add <package>")` |
+| Removing packages | `Skill(skill="astral:uv", args="remove <package>")` |
+| Syncing dependencies | `Skill(skill="astral:uv", args="sync --all-groups")` |
+| Linting | `Skill(skill="astral:ruff")` - follow guidance |
+| Formatting | `Skill(skill="astral:ruff")` - follow guidance |
+| Type checking | Trust LSP `<new-diagnostics>`, or `Skill(skill="astral:ty")` |
 
-**Important:** For testing, invoke `pytest` via the `uv` skill: `Skill` tool with `skill: "astral:uv"` and `args: "run pytest"`.
-
-### Use Bash for:
+### Use Bash ONLY For:
 
 - `git` commands
-- `just` commands (only when needed for non-Astral tasks)
-- Other non-Astral tools
+- `just docs` / `just docs-live` (Sphinx documentation)
+- `just install` (initial project setup)
+- `just clean` (cleanup artifacts)
+- Other non-Python tools
 
-**Do NOT use:**
+### NEVER Use Bash For:
 
-- Just recipes for `lint`, `format`, or `typecheck` - use Astral skills instead
-- Bash commands for `uv`, `ruff`, or `ty`
-- `grep`/`rg` for code exploration - use LSP instead
+❌ `uv run`, `uv add`, `uv remove`, `uv sync` - use `astral:uv` skill
+❌ `ruff check`, `ruff format` - use `astral:ruff` skill
+❌ `ty check` - use LSP diagnostics or `astral:ty` skill
+❌ `python script.py` - use `astral:uv` skill with `run script.py`
+❌ `pytest` - use `astral:uv` skill with `run pytest`
+❌ `just test`, `just lint`, `just fmt`, `just typecheck` - use Astral skills
+❌ `grep`/`rg` for code exploration - use LSP instead
 
 ## Example: Type Checking Workflow
 
-**Bad:**
+**❌ Bad - Using Bash:**
 
 ```python
 # Edit file
-# Run: Bash("uv run ty check src/")
-# Read output
+Bash("uv run ty check src/")  # WRONG - don't use Bash
 # Edit file again
-# Run: Bash("uv run ty check src/") again
+Bash("uv run ty check src/")  # WRONG - redundant manual checks
 ```
 
-**Good:**
+**✅ Good - Trust LSP:**
 
 ```python
 # Edit file
-# Observe <new-diagnostics> block (LSP provides feedback)
+# Observe <new-diagnostics> block (ty LSP provides real-time feedback)
 # Edit file to fix issues
 # Observe <new-diagnostics> updated or cleared
-# Final verification: only if needed for entire codebase
+# Only use Skill(skill="astral:ty") if you need explicit guidance
 ```
 
 ## Example: Running Tests
 
-**Bad:**
+**❌ Bad:**
 
 ```python
-# Using bash
-Bash("uv run pytest tests/")
+# Using Bash directly
+Bash("uv run pytest tests/")  # WRONG
 
-# Or using Just
-Bash("just test")
+# Using Just
+Bash("just test")  # WRONG
+
+# Using python directly
+Bash("python -m pytest tests/")  # WRONG
 ```
 
-**Good:**
+**✅ Good - Use uv Skill:**
 
 ```python
-# Using the uv skill
+# Run all tests
 Skill(skill="astral:uv", args="run pytest tests/")
 
-# With additional arguments
+# Run specific test file
 Skill(skill="astral:uv", args="run pytest tests/test_specific.py -v")
+
+# Run with coverage
+Skill(skill="astral:uv", args="run pytest --cov=src tests/")
+
+# Run doctests
+Skill(skill="astral:uv", args="run pytest src/ docs/ README.md")
+```
+
+## Example: Linting and Formatting
+
+**❌ Bad:**
+
+```python
+Bash("ruff check .")  # WRONG
+Bash("ruff format .")  # WRONG
+Bash("just lint")  # WRONG
+Bash("just fmt")  # WRONG
+```
+
+**✅ Good - Use ruff Skill:**
+
+```python
+# Invoke the ruff skill and follow its guidance
+Skill(skill="astral:ruff")
+# The skill will guide you on proper ruff check/format usage
+```
+
+## Example: Package Management
+
+**❌ Bad:**
+
+```python
+Bash("uv add requests")  # WRONG
+Bash("uv remove flask")  # WRONG
+Bash("pip install requests")  # VERY WRONG
+```
+
+**✅ Good - Use uv Skill:**
+
+```python
+Skill(skill="astral:uv", args="add requests")
+Skill(skill="astral:uv", args="add --group dev pytest")
+Skill(skill="astral:uv", args="remove flask")
+Skill(skill="astral:uv", args="sync --all-groups")
 ```

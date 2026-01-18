@@ -23,12 +23,13 @@ from typing import Any, Self
 import attrs
 import svcs
 
+from svcs_di._container_mixin import InjectorMixin
 from svcs_di.auto import AsyncInjector, Injector
 from svcs_di.injectors.keyword import KeywordAsyncInjector, KeywordInjector
 
 
 @attrs.define
-class InjectorContainer(svcs.Container):
+class InjectorContainer(InjectorMixin, svcs.Container):
     """
     A container that extends svcs.Container with dependency injection support.
 
@@ -96,10 +97,7 @@ class InjectorContainer(svcs.Container):
         See Also:
             KeywordInjector: For details on three-tier kwargs override behavior.
         """
-        if self.injector is None:
-            raise ValueError("Cannot inject without an injector configured")
-
-        return self.injector(container=self)(svc_type, **kwargs)
+        return self._do_inject(svc_type, {}, **kwargs)
 
     async def ainject[T](self, svc_type: type[T], /, **kwargs: Any) -> T:
         """
@@ -128,7 +126,4 @@ class InjectorContainer(svcs.Container):
         See Also:
             KeywordAsyncInjector: For details on async three-tier kwargs override behavior.
         """
-        if self.async_injector is None:
-            raise ValueError("Cannot inject without an injector configured")
-
-        return await self.async_injector(container=self)(svc_type, **kwargs)
+        return await self._do_ainject(svc_type, {}, **kwargs)

@@ -33,6 +33,7 @@ from typing import Any
 import attrs
 import svcs
 
+from svcs_di._container_mixin import InjectorMixin
 from svcs_di.injectors.hopscotch import HopscotchAsyncInjector, HopscotchInjector
 from svcs_di.injectors.locator import Implementation, ServiceLocator
 
@@ -149,7 +150,7 @@ class HopscotchRegistry(svcs.Registry):
 
 
 @attrs.define
-class HopscotchContainer(svcs.Container):
+class HopscotchContainer(InjectorMixin, svcs.Container):
     """
     A container that extends svcs.Container with HopscotchInjector-based injection.
 
@@ -224,10 +225,7 @@ class HopscotchContainer(svcs.Container):
         See Also:
             HopscotchInjector: For details on locator-based resolution and precedence.
         """
-        if self.injector is None:
-            raise ValueError("Cannot inject without an injector configured")
-
-        return self.injector(container=self, resource=resource)(svc_type, **kwargs)
+        return self._do_inject(svc_type, {"resource": resource}, **kwargs)
 
     async def ainject[T](
         self, svc_type: type[T], /, resource: type | None = None, **kwargs: Any
@@ -264,9 +262,4 @@ class HopscotchContainer(svcs.Container):
         See Also:
             HopscotchAsyncInjector: For details on async locator-based resolution.
         """
-        if self.async_injector is None:
-            raise ValueError("Cannot inject without an async injector configured")
-
-        return await self.async_injector(container=self, resource=resource)(
-            svc_type, **kwargs
-        )
+        return await self._do_ainject(svc_type, {"resource": resource}, **kwargs)

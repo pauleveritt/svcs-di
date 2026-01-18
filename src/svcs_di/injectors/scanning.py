@@ -193,72 +193,58 @@ def _caller_package(level: int = 2) -> ModuleType | None:
     return module
 
 
-def _scan_locals(frame_locals: dict[str, Any]) -> list[DecoratedItem]:
-    """Scan local variables for @injectable decorated classes and functions."""
-    return [
-        (obj, getattr(obj, INJECTABLE_METADATA_ATTR))
-        for obj in frame_locals.values()
-        if _is_injectable_target(obj) and hasattr(obj, INJECTABLE_METADATA_ATTR)
-    ]
-
-
-def _import_package(pkg: str) -> ModuleType | None:
-    """Import a package by string name, logging warnings on failure."""
-    try:
-        return importlib.import_module(pkg)
-    except ImportError as e:
-        log.warning(f"Failed to import package '{pkg}': {e}")
-        return None
-
-
-def _collect_modules_to_scan(
+def _resolve_packages_to_modules(
     packages: tuple[str | ModuleType | None, ...],
 ) -> list[ModuleType]:
-    """Collect and import all packages to scan."""
-    modules = []
+    """
+    Convert package specifications to a complete list of modules to scan.
+
+    Takes a tuple of package references (strings, ModuleType objects, or None) and
+    returns all modules including submodules discovered via pkgutil.walk_packages.
+
+    Args:
+        packages: Package/module references - strings are imported, None is skipped
+
+    Returns:
+        List of all discovered modules ready for scanning
+    """
+    # Collect initial modules from package specs
+    modules: list[ModuleType] = []
     for pkg in packages:
         match pkg:
             case None:
                 continue
             case str():
-                if module := _import_package(pkg):
-                    modules.append(module)
+                try:
+                    modules.append(importlib.import_module(pkg))
+                except ImportError as e:
+                    log.warning(f"Failed to import package '{pkg}': {e}")
             case ModuleType():
                 modules.append(pkg)
             case _:
                 log.warning(
                     f"Invalid package type: {type(pkg)}. Must be str, ModuleType, or None"
                 )
-    return modules
 
+    # Discover submodules from packages
+    discovered = list(modules)
+    for module in modules:
+        module_path = getattr(module, "__path__", None)
+        if module_path is None:
+            continue
+        try:
+            for _, modname, _ in pkgutil.walk_packages(
+                path=module_path,
+                prefix=module.__name__ + ".",
+                onerror=lambda name: None,
+            ):
+                try:
+                    discovered.append(importlib.import_module(modname))
+                except ImportError as e:
+                    log.warning(f"Failed to import package '{modname}': {e}")
+        except Exception as e:
+            log.warning(f"Error walking package '{module.__name__}': {e}")
 
-def _discover_submodules(module: ModuleType) -> list[ModuleType]:
-    """Discover all submodules within a package."""
-    # __path__ is only present on packages, not regular modules
-    module_path = getattr(module, "__path__", None)
-    if module_path is None:
-        return []
-
-    submodules = []
-    try:
-        for _, modname, _ in pkgutil.walk_packages(
-            path=module_path,
-            prefix=module.__name__ + ".",
-            onerror=lambda name: None,
-        ):
-            if submodule := _import_package(modname):
-                submodules.append(submodule)
-    except Exception as e:
-        log.warning(f"Error walking package '{module.__name__}': {e}")
-
-    return submodules
-
-
-def _discover_all_modules(modules_to_scan: list[ModuleType]) -> list[ModuleType]:
-    """Discover all modules including submodules from packages."""
-    discovered = list(modules_to_scan)
-    for module in modules_to_scan:
-        discovered.extend(_discover_submodules(module))
     return discovered
 
 
@@ -274,11 +260,6 @@ def _extract_decorated_items(module: ModuleType) -> list[DecoratedItem]:
         except (AttributeError, ImportError):
             continue
     return items
-
-
-def _collect_decorated_items(modules: list[ModuleType]) -> list[DecoratedItem]:
-    """Collect all @injectable decorated items from modules."""
-    return [item for module in modules for item in _extract_decorated_items(module)]
 
 
 def scan(
@@ -313,9 +294,13 @@ def scan(
 
     See examples/scanning/ for complete examples.
     """
-    # Handle locals_dict scanning for testing
+    # Handle locals_dict scanning for testing (inline _scan_locals)
     if locals_dict is not None:
-        decorated_items = _scan_locals(locals_dict)
+        decorated_items: list[DecoratedItem] = [
+            (obj, getattr(obj, INJECTABLE_METADATA_ATTR))
+            for obj in locals_dict.values()
+            if _is_injectable_target(obj) and hasattr(obj, INJECTABLE_METADATA_ATTR)
+        ]
         _register_decorated_items(registry, decorated_items)
         return registry
 
@@ -329,9 +314,12 @@ def scan(
             )
             return registry
 
-    # Collect, discover, and register
-    modules_to_scan = _collect_modules_to_scan(packages)
-    discovered_modules = _discover_all_modules(modules_to_scan)
-    decorated_items = _collect_decorated_items(discovered_modules)
+    # Resolve packages to modules and collect decorated items
+    discovered_modules = _resolve_packages_to_modules(packages)
+    decorated_items = [
+        item
+        for module in discovered_modules
+        for item in _extract_decorated_items(module)
+    ]
     _register_decorated_items(registry, decorated_items)
     return registry

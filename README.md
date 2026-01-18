@@ -490,16 +490,39 @@ service = container.get(Service)  # Gets DefaultGreeting or EmployeeGreeting bas
 
 ## Development
 
+This project uses [uv](https://docs.astral.sh/uv/) for package management, [ruff](https://docs.astral.sh/ruff/) for linting/formatting, and [ty](https://docs.astral.sh/ty/) for type checking.
+
+### Setup
+
+```bash
+# Install dependencies
+uv sync
+
+# Run all quality checks
+just ci-checks
+```
+
 ### Testing
 
 ```bash
 # Run tests
-pytest
+uv run pytest
 
 # Run tests in parallel
-pytest -n auto
+uv run pytest -n auto
 
 # Run with coverage
-pytest --cov=svcs_di
+uv run pytest --cov=svcs_di
+```
+
+### Code Quality
+
+```bash
+# Lint and format
+uv run ruff check --fix .
+uv run ruff format .
+
+# Type check
+uv run ty check src/svcs_di/
 ```
 

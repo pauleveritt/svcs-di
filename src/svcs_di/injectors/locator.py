@@ -153,6 +153,15 @@ import svcs
 # Type alias for implementations: either a class or a callable factory function
 type Implementation = type | Callable[..., Any]
 
+# Type alias for a tuple of factory registrations (used in multi-registration path)
+type RegistrationsTuple = tuple[FactoryRegistration, ...]
+
+# Type alias for service type to single registration mapping (fast path)
+type SingleRegistrationMap = dict[type, FactoryRegistration]
+
+# Type alias for service type to multiple registrations mapping (scoring path)
+type MultiRegistrationMap = dict[type, RegistrationsTuple]
+
 # ============================================================================
 # Scoring Constants
 # ============================================================================
@@ -259,7 +268,7 @@ class FactoryRegistration:
 @functools.lru_cache(maxsize=512)
 def _resolve_implementation_cached(
     single_reg: FactoryRegistration | None,
-    multi_regs: tuple[FactoryRegistration, ...] | None,
+    multi_regs: RegistrationsTuple | None,
     service_type: type,
     resource: type | None,
     location: PurePath | None,
@@ -299,7 +308,7 @@ def _resolve_implementation_cached(
 
 @functools.lru_cache(maxsize=256)
 def _resolve_hierarchical_cached(
-    registrations: tuple[FactoryRegistration, ...],
+    registrations: RegistrationsTuple,
     resource: type | None,
     location: PurePath,
 ) -> Implementation | None:
@@ -338,7 +347,7 @@ def _resolve_hierarchical_cached(
 
 @functools.lru_cache(maxsize=256)
 def _resolve_no_location_cached(
-    registrations: tuple[FactoryRegistration, ...],
+    registrations: RegistrationsTuple,
     resource: type | None,
 ) -> Implementation | None:
     """
@@ -395,11 +404,9 @@ class ServiceLocator:
     """
 
     # Internal storage: service types with single registration use fast path
-    _single_registrations: dict[type, FactoryRegistration] = field(default_factory=dict)
+    _single_registrations: SingleRegistrationMap = field(default_factory=dict)
     # Internal storage: service types with multiple registrations use scoring path
-    _multi_registrations: dict[type, tuple[FactoryRegistration, ...]] = field(
-        default_factory=dict
-    )
+    _multi_registrations: MultiRegistrationMap = field(default_factory=dict)
 
     def register(
         self,

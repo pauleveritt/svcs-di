@@ -77,3 +77,34 @@ def resolve_default_value(default_value: Any) -> Any:
     if callable(default_value):
         return default_value()
     return default_value
+
+
+# Type alias for field resolution functions used by injectors
+type FieldResolverWithKwargs = Callable[[FieldInfo, dict[str, Any]], tuple[bool, Any]]
+
+
+def build_resolved_kwargs(
+    field_infos: list[FieldInfo],
+    resolver: FieldResolverWithKwargs,
+    kwargs: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Build resolved kwargs dictionary using the provided resolver function.
+
+    This is the common implementation for sync injectors to iterate through
+    field_infos and build the resolved kwargs dictionary.
+
+    Args:
+        field_infos: List of field information to resolve
+        resolver: Function to resolve each field value, taking (field_info, kwargs)
+        kwargs: The original kwargs passed to the injector
+
+    Returns:
+        Dictionary of resolved kwargs ready to pass to target callable
+    """
+    resolved_kwargs: dict[str, Any] = {}
+    for field_info in field_infos:
+        has_value, value = resolver(field_info, kwargs)
+        if has_value:
+            resolved_kwargs[field_info.name] = value
+    return resolved_kwargs

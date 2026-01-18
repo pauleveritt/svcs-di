@@ -55,22 +55,28 @@ type ResolutionResult = tuple[bool, Any]
 # ============================================================================
 
 
-def _build_injected_kwargs_sync(
-    field_infos: list[FieldInfo], container: svcs.Container
+type FieldResolver = Callable[[FieldInfo, svcs.Container], ResolutionResult]
+
+
+def _build_injected_kwargs(
+    field_infos: list[FieldInfo],
+    container: svcs.Container,
+    resolver: FieldResolver,
 ) -> dict[str, Any]:
     """
-    Build resolved kwargs dictionary for dependency injection (sync version).
+    Build resolved kwargs dictionary for dependency injection.
 
     Args:
         field_infos: List of field information to resolve
         container: The svcs container to resolve dependencies from
+        resolver: Function to resolve each field value
 
     Returns:
         Dictionary of resolved kwargs ready to pass to target callable
     """
     resolved_kwargs: dict[str, Any] = {}
     for field_info in field_infos:
-        has_value, value = _resolve_field_value(field_info, container)
+        has_value, value = resolver(field_info, container)
         if has_value:
             resolved_kwargs[field_info.name] = value
     return resolved_kwargs
@@ -79,16 +85,7 @@ def _build_injected_kwargs_sync(
 async def _build_injected_kwargs_async(
     field_infos: list[FieldInfo], container: svcs.Container
 ) -> dict[str, Any]:
-    """
-    Build resolved kwargs dictionary for dependency injection (async version).
-
-    Args:
-        field_infos: List of field information to resolve
-        container: The svcs container to resolve dependencies from
-
-    Returns:
-        Dictionary of resolved kwargs ready to pass to target callable
-    """
+    """Build resolved kwargs dictionary for async dependency injection."""
     resolved_kwargs: dict[str, Any] = {}
     for field_info in field_infos:
         has_value, value = await _resolve_field_value_async(field_info, container)
@@ -154,7 +151,9 @@ class DefaultInjector:
             Result of calling target with resolved dependencies
         """
         field_infos = get_field_infos(target)
-        resolved_kwargs = _build_injected_kwargs_sync(field_infos, self.container)
+        resolved_kwargs = _build_injected_kwargs(
+            field_infos, self.container, _resolve_field_value
+        )
         return target(**resolved_kwargs)
 
 
@@ -199,45 +198,43 @@ class DefaultAsyncInjector:
 # ============================================================================
 
 
-class Inject[T]:
-    """
-    Marker type for dependency injection.
+type Inject[T] = T
+"""
+Marker type for dependency injection.
 
-    Use Inject[T] to mark a parameter/field that should be automatically
-    resolved from the svcs container. Only parameters marked with Inject
-    will be injected.
+Use Inject[T] to mark a parameter/field that should be automatically
+resolved from the svcs container. Only parameters marked with Inject
+will be injected.
 
-    Two-tier precedence for value resolution (DefaultInjector):
-    1. container.get(T) or container.get_abstract(T) for protocols
-    2. default values from parameter/field definition
+Two-tier precedence for value resolution (DefaultInjector):
+1. container.get(T) or container.get_abstract(T) for protocols
+2. default values from parameter/field definition
 
-    For kwargs override support (three-tier precedence), use KeywordInjector:
-    1. kwargs passed to injector (highest priority)
-    2. container.get(T) or container.get_abstract(T) for protocols
-    3. default values from parameter/field definition (lowest priority)
+For kwargs override support (three-tier precedence), use KeywordInjector:
+1. kwargs passed to injector (highest priority)
+2. container.get(T) or container.get_abstract(T) for protocols
+3. default values from parameter/field definition (lowest priority)
 
-    Type Checking:
-    --------------
-    At runtime, this is a marker class. At type-checking time, the accompanying
-    auto.pyi stub file provides `type Inject[T] = T`, making type checkers
-    understand that Inject[Greeting] has all attributes of Greeting.
+Type Checking:
+--------------
+Using Python 3.14's PEP 695 type alias syntax (`type Inject[T] = T`), this
+creates a TypeAliasType that is both:
+- Detectable at runtime via get_origin(Inject[T])
+- Transparent to type checkers (they see T directly)
 
-    This dual-representation approach (runtime marker + type stub) enables:
-    - Runtime detection via get_origin(Inject[T])
-    - Type-safe attribute access without cast()
+This eliminates the need for a separate .pyi stub file while providing
+full type safety and runtime introspection capabilities.
 
-    Example:
-        @dataclass
-        class WelcomeService:
-            greeting: Inject[Greeting]  # Type checkers see: Greeting
-            database: Inject[Database]  # Type checkers see: Database
+Example:
+    @dataclass
+    class WelcomeService:
+        greeting: Inject[Greeting]  # Type checkers see: Greeting
+        database: Inject[Database]  # Type checkers see: Database
 
-        service = injector(WelcomeService)
-        service.greeting.greet("World")  # ✓ Type checker knows about greet()
-        service.database.connect()       # ✓ Type checker knows about connect()
-    """
-
-    __slots__ = ()
+    service = injector(WelcomeService)
+    service.greeting.greet("World")  # ✓ Type checker knows about greet()
+    service.database.connect()       # ✓ Type checker knows about connect()
+"""
 
 
 class FieldInfo(NamedTuple):

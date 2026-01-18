@@ -22,7 +22,11 @@ from svcs_di.auto import (
     ResolutionResult,
     get_field_infos,
 )
-from svcs_di.injectors._helpers import resolve_default_value, validate_kwargs
+from svcs_di.injectors._helpers import (
+    build_resolved_kwargs,
+    resolve_default_value,
+    validate_kwargs,
+)
 
 
 def _resolve_from_container_sync(
@@ -141,13 +145,9 @@ class KeywordInjector:
         """
         field_infos = get_field_infos(target)
         validate_kwargs(target, field_infos, kwargs)
-
-        resolved_kwargs: dict[str, Any] = {}
-        for field_info in field_infos:
-            has_value, value = self._resolve_field_value_sync(field_info, kwargs)
-            if has_value:
-                resolved_kwargs[field_info.name] = value
-
+        resolved_kwargs = build_resolved_kwargs(
+            field_infos, self._resolve_field_value_sync, kwargs
+        )
         return target(**resolved_kwargs)
 
 

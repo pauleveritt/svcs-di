@@ -309,7 +309,7 @@ async def test_ainject_with_no_async_injector_raises_value_error() -> None:
     container = InjectorContainer(registry, async_injector=None)
 
     with pytest.raises(
-        ValueError, match="Cannot inject without an injector configured"
+        ValueError, match="Cannot inject without an async injector configured"
     ):
         await container.ainject(DBService, db=Database())
 

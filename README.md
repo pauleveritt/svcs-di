@@ -179,38 +179,27 @@ In summary, the `KeywordInjector` with `inject()` is similar to the default inje
 Note: Using `.inject()` does *not* do caching of the service instance, because it can vary based on kwargs. However, any
 injection done *during* `.inject()` obeys the same `svcs` caching rules.
 
-## Hopscotch Injector
+## Hopscotch: Multi-Implementation Resolution
 
-The `HopscotchInjector` extends the `KeywordInjector` with support for multiple implementations via `ServiceLocator`,
-enabling resource-based and location-based service resolution.
-
-- Register multiple implementations of the same service type
-- Automatically resolves the correct implementation based on resource type and/or location
-- Falls back to standard container resolution if no locator match is found
-- Supports kwargs overrides like `KeywordInjector`
-- Uses hierarchical location matching for URL path-based resolution
+`HopscotchRegistry` and `HopscotchContainer` provide multi-implementation service resolution based on resource type
+and/or location.
 
 ### Why?
 
 Imagine a broad ecosystem of quality, cross-framework web themes, components, and tooling. A site might want to replace
-just one component. Or replace, but only in parts of the site. The HopscotchInjector lets you register callables that
-replace/augment previous registrations.
+just one component. Or replace, but only in parts of the site. Hopscotch lets you register multiple implementations and
+automatically resolve the right one based on context.
 
 ### Quick Start
-
-In this example, different `Greeting` implementations are selected based on the request context.
 
 ```python
 from dataclasses import dataclass
 from pathlib import PurePath
 
-import svcs
-
-from svcs_di import Inject, auto
-from svcs_di.injectors import HopscotchInjector, ServiceLocator, Location
+from svcs_di import Inject
+from svcs_di.injectors import HopscotchContainer, HopscotchRegistry
 
 
-# Define service interface
 class Greeting:
     salutation: str
 
@@ -222,7 +211,7 @@ class DefaultGreeting(Greeting):
 
 @dataclass
 class EmployeeGreeting(Greeting):
-    salutation: str = "Wassup"
+    salutation: str = "Hey"
 
 
 @dataclass
@@ -230,72 +219,47 @@ class AdminGreeting(Greeting):
     salutation: str = "Greetings, Administrator"
 
 
-# Resource types for context-based resolution
-class RequestContext:
-    pass
-
-
-class EmployeeRequestContext(RequestContext):
+class Employee:
+    """Resource type for employee requests."""
     pass
 
 
 @dataclass
 class Service:
-    """A service that depends on Greeting."""
-
     greeting: Inject[Greeting]
 
 
 def main():
-    """Demonstrate HopscotchInjector with resource and location-based resolution."""
-    # Create registry and setup locator with multiple implementations
-    registry = svcs.Registry()
+    # HopscotchRegistry manages ServiceLocator internally
+    registry = HopscotchRegistry()
+    registry.register_implementation(Greeting, DefaultGreeting)
+    registry.register_implementation(Greeting, EmployeeGreeting, resource=Employee)
+    registry.register_implementation(Greeting, AdminGreeting, location=PurePath("/admin"))
 
-    # Register multiple implementations
-    locator = ServiceLocator()
-    locator = locator.register(Greeting, DefaultGreeting)  # Default
-    locator = locator.register(Greeting, EmployeeGreeting, resource=EmployeeRequestContext)  # For employees
-    locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))  # For admin area
-    registry.register_value(ServiceLocator, locator)
+    # Default - no resource or location
+    container = HopscotchContainer(registry)
+    service = container.inject(Service)
+    assert service.greeting.salutation == "Hello"
 
-    # Register HopscotchInjector to enable multi-implementation resolution
-    registry.register_factory(
-        HopscotchInjector,
-        lambda c: HopscotchInjector(container=c, resource=RequestContext)
-    )
-    registry.register_factory(Service, auto(Service))
+    # With resource - gets EmployeeGreeting
+    container = HopscotchContainer(registry, resource=Employee())
+    service = container.inject(Service)
+    assert service.greeting.salutation == "Hey"
 
-    # Example 1: Default greeting (no specific context)
-    container1 = svcs.Container(registry)
-    service1 = container1.get(Service)
-    print(f"Default: {service1.greeting.salutation}")
-
-    # Example 2: Employee context
-    registry.register_value(RequestContext, EmployeeRequestContext())
-    container2 = svcs.Container(registry)
-    service2 = container2.get(Service)
-    print(f"Employee: {service2.greeting.salutation}")
-
-    # Example 3: Admin location
-    registry.register_value(Location, PurePath("/admin"))
-    container3 = svcs.Container(registry)
-    service3 = container3.get(Service)
-    print(f"Admin: {service3.greeting.salutation}")
+    # With location - gets AdminGreeting
+    container = HopscotchContainer(registry, location=PurePath("/admin"))
+    service = container.inject(Service)
+    assert service.greeting.salutation == "Greetings, Administrator"
 ```
 
 ### Features
 
-- **Multi-implementation support**: Register multiple implementations of the same service type via `ServiceLocator`
-- **Resource-based resolution**: Automatically selects implementation based on resource type (e.g., `CustomerContext`,
-  `EmployeeContext`)
-- **Location-based resolution**: Hierarchical URL path-based selection (e.g., `/admin`, `/public`) with parent-child
-  fallback
-- **Combined resource+location**: Support both criteria simultaneously for fine-grained control
-- **Three-tier precedence**: (1) kwargs overrides, (2) ServiceLocator with fallback to container services, (3) parameter
-  defaults
+- **Simple API**: `HopscotchRegistry.register_implementation()` handles ServiceLocator internally
+- **Resource-based resolution**: Select implementation based on resource type passed to container
+- **Location-based resolution**: Hierarchical URL path-based selection with parent-child fallback
+- **Combined resource+location**: Both criteria simultaneously for fine-grained control
 - **LIFO registration order**: Most recent registration wins when multiple matches have equal precedence
-- **Async support**: `HopscotchAsyncInjector` provides the same functionality for async dependencies
-- **Nested injection**: Recursively injects dependencies for multi-implementation types
+- **Async support**: `HopscotchAsyncInjector` for async dependencies
 
 ## Decorator Scanning
 
@@ -377,84 +341,31 @@ def main():
     print(f"User: {repo.get_user(42)}")
 ```
 
-### Resource-Based Scanning
+### Advanced: Resource and Location-Based Scanning
 
-Register multiple implementations based on resource types:
-
-```python
-from pathlib import PurePath
-
-from svcs_di.injectors.locator import scan, ServiceLocator
-
-
-class RequestContext:
-    pass
-
-
-class EmployeeContext(RequestContext):
-    pass
-
-
-class CustomerContext(RequestContext):
-    pass
-
-
-# Default implementation
-@injectable
-@dataclass
-class DefaultGreeting:
-    salutation: str = "Hello"
-
-
-# Employee-specific implementation
-@injectable(resource=EmployeeContext)
-@dataclass
-class EmployeeGreeting:
-    salutation: str = "Hey"
-
-
-# Customer-specific implementation
-@injectable(resource=CustomerContext)
-@dataclass
-class CustomerGreeting:
-    salutation: str = "Good morning"
-
-
-# Scan discovers all implementations
-registry = svcs.Registry()
-scan(registry)
-
-# Get the ServiceLocator to resolve based on context
-container = svcs.Container(registry)
-locator = container.get(ServiceLocator)
-
-# Resolve different implementations based on resource
-employee_impl = locator.get_implementation(EmployeeGreeting, EmployeeContext)
-customer_impl = locator.get_implementation(CustomerGreeting, CustomerContext)
-```
-
-### Multiple Implementations with `for_` Parameter
-
-Use `for_` to register multiple implementations of a common service type:
+Combine `@injectable` with `HopscotchRegistry` for multi-implementation scanning:
 
 ```python
 from typing import Protocol
+from svcs_di.injectors import HopscotchRegistry, HopscotchContainer
 
 
 class Greeting(Protocol):
-    """Common protocol for greetings."""
-
     def greet(self, name: str) -> str: ...
 
 
-@injectable(for_=Greeting)  # Default implementation
+class Employee:
+    pass
+
+
+@injectable(for_=Greeting)
 @dataclass
 class DefaultGreeting:
     def greet(self, name: str) -> str:
         return f"Hello, {name}!"
 
 
-@injectable(for_=Greeting, resource=EmployeeContext)
+@injectable(for_=Greeting, resource=Employee)
 @dataclass
 class EmployeeGreeting:
     def greet(self, name: str) -> str:
@@ -463,30 +374,41 @@ class EmployeeGreeting:
 
 @dataclass
 class Service:
-    # Depend on the protocol, not specific implementations
     greeting: Inject[Greeting]
 
 
-# Scan and resolve automatically
-registry = svcs.Registry()
+# Use HopscotchRegistry for multi-implementation support
+registry = HopscotchRegistry()
 scan(registry)
 
-# HopscotchInjector resolves the correct implementation
-container = svcs.Container(registry)
-service = container.get(Service)  # Gets DefaultGreeting or EmployeeGreeting based on context
+# Resolve based on context
+container = HopscotchContainer(registry, resource=Employee())
+service = container.inject(Service)  # Gets EmployeeGreeting
+```
+
+### Setup Functions
+
+Convention-based setup functions for registry and container configuration:
+
+```python
+# In your package's __init__.py
+def svcs_registry(registry: HopscotchRegistry) -> None:
+    """Called during scan() for registry-time setup."""
+    registry.register_value(Config, Config(debug=True))
+
+
+def svcs_container(container: HopscotchContainer) -> None:
+    """Called when each HopscotchContainer is created."""
+    container.register_local_value(str, generate_request_id())
 ```
 
 ### Features
 
-- **Auto-discovery**: Mark classes with `@injectable`, call `scan()` - no manual registration needed
-- **Package scanning**: Automatically discovers all submodules in a package recursively
-- **Auto-detect caller's package**: `scan(registry)` with no arguments auto-detects the calling package
-- **Resource-based registration**: `@injectable(resource=Context)` for context-specific implementations
-- **Location-based registration**: `@injectable(location=PurePath("/admin"))` for URL path-based resolution
-- **Multiple implementations**: `@injectable(for_=Protocol)` to register multiple implementations of a common type
-- **ServiceLocator integration**: Resource/location-based decorators automatically use `ServiceLocator`
-- **Direct registry fallback**: Simple `@injectable` without resource/location registers directly to registry
-- **Nested injection**: Works seamlessly with `Inject[T]` dependency injection
+- **Auto-discovery**: Mark classes with `@injectable`, call `scan()` - no manual registration
+- **Package scanning**: Discovers all submodules recursively
+- **Resource/location registration**: `@injectable(resource=..., location=...)`
+- **Multiple implementations**: `@injectable(for_=Protocol)` for interface-based registration
+- **Setup functions**: `svcs_registry()` and `svcs_container()` for configuration hooks
 
 ## Development
 

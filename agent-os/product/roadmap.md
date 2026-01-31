@@ -87,8 +87,12 @@
             if self.final_value is None:
                 self.final_value = other_service.value + 1
     ```
+18. [ ] Resource and Location - Since `resource` and `location` are built-in "predicates" for Hopscotch, would it be simpler to store these on
+  `HopscotchContainer`? We'd then make a container with this (a) on the instance and (b) in the container. You could ask for
+  `Inject[Resource]` or `Inject[Location]`. You'd make a container with `with HopscotchContainer(registry,
+  resource=FrenchCustomer(), location=Location()`.
 
-18. [ ] `svcs_setup` For Container — We currently have a `svcs_setup` function to let "sites" extend the registry. We
+19. [ ] `svcs_setup` For Container — We currently have a `svcs_setup` function to let "sites" extend the registry. We
     need the same for containers. Perhaps another function. Perhaps the current function returns a function that can go
     in the registry, and is then looked up when making the container to find all the setup functions.
 

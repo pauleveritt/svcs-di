@@ -378,7 +378,9 @@ def scan(
         registry_func, container_func = _extract_convention_functions(module)
 
         # Check for TypeError condition: convention functions with plain svcs.Registry
-        if (registry_func is not None or container_func is not None) and not is_hopscotch:
+        if (
+            registry_func is not None or container_func is not None
+        ) and not is_hopscotch:
             raise TypeError(
                 f"Convention functions (svcs_registry/svcs_container) found in "
                 f"{module.__name__} but registry is not HopscotchRegistry. "

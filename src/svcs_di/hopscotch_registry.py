@@ -250,15 +250,18 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
             ValueError: If no injector is configured.
 
         Examples:
-            With container resource (automatic type derivation):
-                >>> container = HopscotchContainer(registry, resource=EmployeeContext())
-                >>> service = container.inject(WelcomeService)  # Uses EmployeeContext
+            With container resource (automatic type derivation)::
 
-            With explicit resource override:
-                >>> service = container.inject(WelcomeService, resource=VIPContext)
+                container = HopscotchContainer(registry, resource=EmployeeContext())
+                service = container.inject(WelcomeService)  # Uses EmployeeContext
 
-            With kwargs override:
-                >>> service = container.inject(WelcomeService, greeting=mock_greeting)
+            With explicit resource override::
+
+                service = container.inject(WelcomeService, resource=VIPContext)
+
+            With kwargs override::
+
+                service = container.inject(WelcomeService, greeting=mock_greeting)
 
         See Also:
             HopscotchInjector: For details on locator-based resolution and precedence.
@@ -296,15 +299,18 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
             ValueError: If no async_injector is configured.
 
         Examples:
-            With container resource (automatic type derivation):
-                >>> container = HopscotchContainer(registry, resource=EmployeeContext())
-                >>> service = await container.ainject(WelcomeService)  # Uses EmployeeContext
+            With container resource (automatic type derivation)::
 
-            With explicit resource override:
-                >>> service = await container.ainject(WelcomeService, resource=VIPContext)
+                container = HopscotchContainer(registry, resource=EmployeeContext())
+                service = await container.ainject(WelcomeService)  # Uses EmployeeContext
 
-            With kwargs override:
-                >>> service = await container.ainject(WelcomeService, greeting=mock_greeting)
+            With explicit resource override::
+
+                service = await container.ainject(WelcomeService, resource=VIPContext)
+
+            With kwargs override::
+
+                service = await container.ainject(WelcomeService, greeting=mock_greeting)
 
         See Also:
             HopscotchAsyncInjector: For details on async locator-based resolution.

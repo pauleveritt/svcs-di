@@ -366,7 +366,7 @@ def test_injectable_decorator_with_resource_and_container() -> None:
         pass
 
     class Protocol:
-        pass
+        name: str
 
     @injectable(for_=Protocol)
     @dataclass
@@ -400,7 +400,7 @@ def test_injectable_decorator_with_location_and_container() -> None:
     """Test @injectable(location=X) works with HopscotchContainer location."""
 
     class Protocol:
-        pass
+        name: str
 
     @injectable(for_=Protocol)
     @dataclass
@@ -442,7 +442,7 @@ def test_injectable_decorator_with_both_resource_and_location() -> None:
         pass
 
     class Protocol:
-        pass
+        name: str
 
     @injectable(for_=Protocol)
     @dataclass
@@ -488,7 +488,8 @@ def test_scanning_with_resource_marker() -> None:
         id: int = 123
 
     class Protocol:
-        pass
+        name: str
+        resource: Customer
 
     @injectable(for_=Protocol, resource=Customer)
     @dataclass

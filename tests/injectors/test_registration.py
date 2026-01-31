@@ -7,6 +7,7 @@ from pathlib import Path
 import svcs
 
 from svcs_di.auto import Inject
+from svcs_di.injectors import HopscotchRegistry
 from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import ServiceLocator, scan
 
@@ -266,7 +267,8 @@ def test_registration_creates_proper_factory_functions():
 
 def test_scan_with_existing_test_fixtures():
     """Test scanning existing test fixtures works correctly."""
-    registry = svcs.Registry()
+    # Use HopscotchRegistry since some sub-packages have convention functions
+    registry = HopscotchRegistry()
 
     # Scan the test fixtures package
     scan(registry, "tests.test_fixtures.scanning_test_package")

@@ -4,9 +4,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
 import svcs
 
 from svcs_di import DefaultInjector, Inject, Injector
+from svcs_di.injectors import HopscotchContainer, HopscotchRegistry
 from svcs_di.injectors.locator import HopscotchInjector, ServiceLocator, scan
 
 # Add test_fixtures to path so we can import test modules
@@ -45,7 +47,8 @@ def test_scan_single_module_with_decorated_classes():
 
 def test_scan_package_multiple_modules():
     """Test scanning a package discovers decorated classes in multiple modules."""
-    registry = svcs.Registry()
+    # Use HopscotchRegistry since sub-packages have convention functions
+    registry = HopscotchRegistry()
 
     # Scan the entire package by name
     result = scan(registry, "tests.test_fixtures.scanning_test_package")
@@ -107,7 +110,8 @@ def test_scan_handles_empty_package_gracefully():
 
 def test_scan_nested_packages():
     """Test scan() discovers modules in nested packages."""
-    registry = svcs.Registry()
+    # Use HopscotchRegistry since sub-packages have convention functions
+    registry = HopscotchRegistry()
 
     # Scan package that contains nested packages
     result = scan(registry, "tests.test_fixtures.scanning_test_package")
@@ -507,3 +511,215 @@ def test_scan_namespace_package():
     service = container.get(NamespaceService)
     assert isinstance(service, NamespaceService)
     assert service.name == "NamespaceService"
+
+
+# ============================================================================
+# Task: Container Setup Functions Tests
+# ============================================================================
+
+
+class TestContainerSetupFunctions:
+    """Tests for convention-based setup functions (svcs_registry and svcs_container)."""
+
+    def test_svcs_registry_called_during_scan(self):
+        """Test that svcs_registry function is called during scan()."""
+        # Clear any previous calls
+        from tests.test_fixtures.scanning_test_package.with_setup_funcs import (
+            registry_setup_calls,
+        )
+
+        registry_setup_calls.clear()
+
+        registry = HopscotchRegistry()
+        scan(registry, "tests.test_fixtures.scanning_test_package.with_setup_funcs")
+
+        # Verify svcs_registry was called
+        assert len(registry_setup_calls) == 1
+        assert "svcs_registry called" in registry_setup_calls[0]
+
+        # Verify the registry setup function had effect
+        container = svcs.Container(registry)
+        value = container.get(str)
+        assert value == "registry_setup_value"
+
+    def test_svcs_container_stored_and_called_on_container_creation(self):
+        """Test that svcs_container is stored and called when HopscotchContainer is created."""
+        from tests.test_fixtures.scanning_test_package.with_setup_funcs import (
+            container_setup_calls,
+        )
+
+        container_setup_calls.clear()
+
+        registry = HopscotchRegistry()
+        scan(registry, "tests.test_fixtures.scanning_test_package.with_setup_funcs")
+
+        # No container setup calls yet
+        assert len(container_setup_calls) == 0
+
+        # Verify the function is stored
+        assert len(registry.container_setup_funcs) == 1
+
+        # Create container - should invoke svcs_container
+        container = HopscotchContainer(registry)
+
+        # Verify svcs_container was called
+        assert len(container_setup_calls) == 1
+        assert "svcs_container called" in container_setup_calls[0]
+
+        # Verify the container setup function had effect
+        value = container.get(int)
+        assert value == 1
+
+    def test_each_container_gets_its_own_setup_call(self):
+        """Test that svcs_container is called for each new container."""
+        from tests.test_fixtures.scanning_test_package.with_setup_funcs import (
+            container_setup_calls,
+        )
+
+        container_setup_calls.clear()
+
+        registry = HopscotchRegistry()
+        scan(registry, "tests.test_fixtures.scanning_test_package.with_setup_funcs")
+
+        # Create multiple containers
+        container1 = HopscotchContainer(registry)
+        container2 = HopscotchContainer(registry)
+        container3 = HopscotchContainer(registry)
+
+        # Each container should have triggered a setup call
+        assert len(container_setup_calls) == 3
+
+        # Each container should have its own call count value
+        assert container1.get(int) == 1
+        assert container2.get(int) == 2
+        assert container3.get(int) == 3
+
+    def test_type_error_with_plain_svcs_registry(self):
+        """Test that TypeError is raised when convention functions found with plain svcs.Registry."""
+        registry = svcs.Registry()
+
+        with pytest.raises(TypeError) as exc_info:
+            scan(registry, "tests.test_fixtures.scanning_test_package.with_setup_funcs")
+
+        assert "HopscotchRegistry" in str(exc_info.value)
+        assert "svcs_registry/svcs_container" in str(exc_info.value)
+
+    def test_registry_only_package(self):
+        """Test package with only svcs_registry function."""
+        from tests.test_fixtures.scanning_test_package.with_registry_only import (
+            registry_only_calls,
+        )
+
+        registry_only_calls.clear()
+
+        registry = HopscotchRegistry()
+        scan(registry, "tests.test_fixtures.scanning_test_package.with_registry_only")
+
+        # Verify svcs_registry was called
+        assert len(registry_only_calls) == 1
+
+        # Verify no container setup functions stored
+        assert len(registry.container_setup_funcs) == 0
+
+        # Verify registry setup had effect
+        container = svcs.Container(registry)
+        value = container.get(str)
+        assert value == "registry_only_value"
+
+    def test_container_only_package(self):
+        """Test package with only svcs_container function."""
+        from tests.test_fixtures.scanning_test_package.with_container_only import (
+            container_only_calls,
+        )
+
+        container_only_calls.clear()
+
+        registry = HopscotchRegistry()
+        scan(registry, "tests.test_fixtures.scanning_test_package.with_container_only")
+
+        # Verify container setup function is stored
+        assert len(registry.container_setup_funcs) == 1
+
+        # No calls yet
+        assert len(container_only_calls) == 0
+
+        # Create container
+        container = HopscotchContainer(registry)
+
+        # Verify svcs_container was called
+        assert len(container_only_calls) == 1
+        assert container.get(int) == 42
+
+    def test_package_order_determines_priority(self):
+        """Test that later packages in scan() override earlier ones."""
+        from tests.test_fixtures.scanning_test_package.with_registry_only import (
+            registry_only_calls,
+        )
+        from tests.test_fixtures.scanning_test_package.with_setup_funcs import (
+            container_setup_calls,
+            registry_setup_calls,
+        )
+
+        registry_setup_calls.clear()
+        container_setup_calls.clear()
+        registry_only_calls.clear()
+
+        registry = HopscotchRegistry()
+
+        # Scan both packages - order matters
+        scan(
+            registry,
+            "tests.test_fixtures.scanning_test_package.with_registry_only",
+            "tests.test_fixtures.scanning_test_package.with_setup_funcs",
+        )
+
+        # Both svcs_registry functions should be called
+        assert len(registry_only_calls) == 1
+        assert len(registry_setup_calls) == 1
+
+        # The later package's value should win (overwrites str registration)
+        container = svcs.Container(registry)
+        value = container.get(str)
+        assert value == "registry_setup_value"  # from with_setup_funcs (later)
+
+    def test_injectable_and_setup_functions_work_together(self):
+        """Test that @injectable and setup functions work together in same package."""
+        from tests.test_fixtures.scanning_test_package.with_setup_funcs import (
+            SetupService,
+            container_setup_calls,
+            registry_setup_calls,
+        )
+
+        registry_setup_calls.clear()
+        container_setup_calls.clear()
+
+        registry = HopscotchRegistry()
+        scan(registry, "tests.test_fixtures.scanning_test_package.with_setup_funcs")
+
+        # Setup functions should be called
+        assert len(registry_setup_calls) == 1
+
+        # Create container
+        container = HopscotchContainer(registry)
+        assert len(container_setup_calls) == 1
+
+        # @injectable service should work
+        service = container.get(SetupService)
+        assert isinstance(service, SetupService)
+        assert service.name == "SetupService"
+
+    def test_no_convention_functions_with_plain_svcs_registry_is_ok(self):
+        """Test that packages without convention functions work with plain svcs.Registry."""
+        registry = svcs.Registry()
+
+        # This package has no convention functions, should work fine
+        result = scan(registry, "tests.test_fixtures.scanning_test_package.service_a")
+
+        assert result is registry
+
+        # Services should still be registered
+        container = svcs.Container(registry)
+        from tests.test_fixtures.scanning_test_package.service_a import ServiceA
+
+        service = container.get(ServiceA)
+        assert service.name == "ServiceA"

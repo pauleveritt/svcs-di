@@ -646,3 +646,133 @@ def test_hopscotch_container_with_standard_svcs_registry() -> None:
     # Should resolve via standard container.get() fallback
     assert isinstance(service.greeting, DefaultGreeting)
     assert service.greeting.message == "Hello, World!"
+
+
+# =============================================================================
+# Task Group 5: Container Setup Functions Integration Tests
+# =============================================================================
+
+
+def test_hopscotch_registry_has_container_setup_funcs_attribute() -> None:
+    """Test that HopscotchRegistry has _container_setup_funcs attribute."""
+    registry = HopscotchRegistry()
+
+    assert hasattr(registry, "_container_setup_funcs")
+    assert isinstance(registry._container_setup_funcs, list)
+    assert len(registry._container_setup_funcs) == 0
+
+
+def test_hopscotch_registry_container_setup_funcs_property() -> None:
+    """Test that container_setup_funcs property returns the internal list."""
+    registry = HopscotchRegistry()
+
+    funcs = registry.container_setup_funcs
+
+    assert funcs is registry._container_setup_funcs
+    assert isinstance(funcs, list)
+
+
+def test_hopscotch_container_invokes_setup_funcs_on_creation() -> None:
+    """Test that HopscotchContainer invokes setup functions from registry."""
+    registry = HopscotchRegistry()
+
+    # Track calls
+    calls: list[str] = []
+
+    def setup_func(container) -> None:
+        calls.append("setup called")
+        container.register_local_value(str, "setup_value")
+
+    # Manually add setup function (simulating what scan() would do)
+    registry._container_setup_funcs.append(setup_func)
+
+    # Create container
+    container = HopscotchContainer(registry)
+
+    # Verify setup was called
+    assert len(calls) == 1
+    assert calls[0] == "setup called"
+
+    # Verify setup had effect
+    value = container.get(str)
+    assert value == "setup_value"
+
+
+def test_hopscotch_container_multiple_setup_funcs_called_in_order() -> None:
+    """Test that multiple setup functions are called in order."""
+    registry = HopscotchRegistry()
+
+    # Track call order
+    call_order: list[int] = []
+
+    def setup1(container) -> None:
+        call_order.append(1)
+
+    def setup2(container) -> None:
+        call_order.append(2)
+
+    def setup3(container) -> None:
+        call_order.append(3)
+
+    registry._container_setup_funcs.extend([setup1, setup2, setup3])
+
+    # Create container
+    HopscotchContainer(registry)
+
+    # Verify order
+    assert call_order == [1, 2, 3]
+
+
+def test_hopscotch_container_setup_funcs_with_standard_registry_does_nothing() -> None:
+    """Test that HopscotchContainer with standard registry skips setup funcs."""
+    registry = svcs.Registry()
+
+    # Standard registry doesn't have container_setup_funcs
+    assert not hasattr(registry, "container_setup_funcs")
+
+    # Creating HopscotchContainer should not fail
+    container = HopscotchContainer(registry)
+
+    # Container should work normally
+    registry.register_value(str, "test")
+    value = container.get(str)
+    assert value == "test"
+
+
+def test_end_to_end_scan_with_setup_functions() -> None:
+    """End-to-end test: scan() with setup functions -> HopscotchContainer."""
+    from svcs_di.injectors.scanning import scan
+
+    # Clear previous calls
+    from tests.test_fixtures.scanning_test_package.with_setup_funcs import (
+        SetupService,
+        container_setup_calls,
+        registry_setup_calls,
+    )
+
+    registry_setup_calls.clear()
+    container_setup_calls.clear()
+
+    # Setup
+    registry = HopscotchRegistry()
+    scan(registry, "tests.test_fixtures.scanning_test_package.with_setup_funcs")
+
+    # Registry setup should have been called
+    assert len(registry_setup_calls) == 1
+
+    # Create multiple containers
+    container1 = HopscotchContainer(registry)
+    container2 = HopscotchContainer(registry)
+
+    # Container setup should have been called for each
+    assert len(container_setup_calls) == 2
+
+    # Both containers should have the @injectable service
+    service1 = container1.get(SetupService)
+    service2 = container2.get(SetupService)
+    assert service1.name == "SetupService"
+    assert service2.name == "SetupService"
+
+    # Each container has its own local value from setup
+    assert container1.get(int) == 1
+    assert container2.get(int) == 2

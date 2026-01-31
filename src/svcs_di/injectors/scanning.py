@@ -24,6 +24,7 @@ import importlib
 import inspect
 import logging
 import pkgutil
+from collections.abc import Callable
 from types import ModuleType
 from typing import Any
 
@@ -38,6 +39,13 @@ log = logging.getLogger("svcs_di")
 
 # Type alias for decorated items discovered during scanning
 type DecoratedItem = tuple[Implementation, InjectableMetadata]
+
+# Convention function names for setup
+REGISTRY_SETUP_FUNC_NAME = "svcs_registry"
+CONTAINER_SETUP_FUNC_NAME = "svcs_container"
+
+# Type alias for convention functions discovered during scanning
+type ConventionFunctions = tuple[Callable[..., None] | None, Callable[..., None] | None]
 
 
 def _is_hopscotch_registry(registry: svcs.Registry) -> bool:
@@ -262,6 +270,37 @@ def _extract_decorated_items(module: ModuleType) -> list[DecoratedItem]:
     return items
 
 
+def _extract_convention_functions(module: ModuleType) -> ConventionFunctions:
+    """
+    Extract convention-based setup functions from a module.
+
+    Looks for functions named `svcs_registry` and `svcs_container` in the module.
+    These functions follow a convention-over-configuration pattern for setup.
+
+    Args:
+        module: The module to inspect for convention functions.
+
+    Returns:
+        Tuple of (svcs_registry_func, svcs_container_func), either may be None.
+    """
+    registry_func: Callable[..., None] | None = None
+    container_func: Callable[..., None] | None = None
+
+    # Check for svcs_registry function
+    if hasattr(module, REGISTRY_SETUP_FUNC_NAME):
+        func = getattr(module, REGISTRY_SETUP_FUNC_NAME)
+        if inspect.isfunction(func):
+            registry_func = func
+
+    # Check for svcs_container function
+    if hasattr(module, CONTAINER_SETUP_FUNC_NAME):
+        func = getattr(module, CONTAINER_SETUP_FUNC_NAME)
+        if inspect.isfunction(func):
+            container_func = func
+
+    return (registry_func, container_func)
+
+
 def scan(
     registry: svcs.Registry,
     *packages: str | ModuleType | None,
@@ -275,6 +314,13 @@ def scan(
     location-based resolution. Classes without resource/location metadata are registered
     directly to Registry.
 
+    Also discovers convention-based setup functions:
+    - `svcs_registry(registry)`: Called immediately during scan for registry-time setup
+    - `svcs_container(container)`: Stored and called when HopscotchContainer is created
+
+    Note: Convention functions require HopscotchRegistry. Using them with plain
+    svcs.Registry raises TypeError.
+
     Args:
         registry: svcs.Registry to register services into
         *packages: Package/module references to scan:
@@ -286,6 +332,9 @@ def scan(
 
     Returns:
         The registry instance for method chaining.
+
+    Raises:
+        TypeError: If convention functions are found but registry is not HopscotchRegistry.
 
     Examples:
         scan(registry)                           # Auto-detect caller's package
@@ -322,4 +371,26 @@ def scan(
         for item in _extract_decorated_items(module)
     ]
     _register_decorated_items(registry, decorated_items)
+
+    # Discover and process convention functions
+    is_hopscotch = _is_hopscotch_registry(registry)
+    for module in discovered_modules:
+        registry_func, container_func = _extract_convention_functions(module)
+
+        # Check for TypeError condition: convention functions with plain svcs.Registry
+        if (registry_func is not None or container_func is not None) and not is_hopscotch:
+            raise TypeError(
+                f"Convention functions (svcs_registry/svcs_container) found in "
+                f"{module.__name__} but registry is not HopscotchRegistry. "
+                f"Use HopscotchRegistry to enable setup function support."
+            )
+
+        # Call svcs_registry immediately
+        if registry_func is not None:
+            registry_func(registry)
+
+        # Store svcs_container for later invocation
+        if container_func is not None:
+            registry._container_setup_funcs.append(container_func)  # type: ignore[attr-defined]
+
     return registry

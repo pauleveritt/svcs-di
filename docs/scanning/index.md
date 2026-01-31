@@ -25,6 +25,8 @@ scan(registry)  # Finds and registers all @injectable classes
 - **Recursive scanning**: Discover services in nested packages
 - **String package names**: Scan packages without importing them first
 - **Cross-module dependencies**: Services can depend on services in other modules
+- **Setup functions**: Convention-based `svcs_registry` and `svcs_container` functions for registry-time and
+  container-time configuration
 
 ```{toctree}
 :maxdepth: 2
@@ -33,4 +35,5 @@ scan(registry)  # Finds and registers all @injectable classes
 basic_scanning
 scanning_protocols
 nested_scanning
+setup_functions
 ```

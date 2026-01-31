@@ -27,6 +27,7 @@ Example:
     >>> service = container.inject(WelcomeService)  # Resolves via locator
 """
 
+from collections.abc import Callable
 from pathlib import PurePath
 from typing import Any
 
@@ -69,6 +70,9 @@ class HopscotchRegistry(svcs.Registry):
     """
 
     _locator: ServiceLocator = attrs.field(factory=ServiceLocator, init=False)
+    _container_setup_funcs: list[Callable[[Any], None]] = attrs.field(
+        factory=list, init=False
+    )
 
     @property
     def locator(self) -> ServiceLocator:
@@ -86,6 +90,20 @@ class HopscotchRegistry(svcs.Registry):
             >>> impl = locator.get_implementation(Greeting)
         """
         return self._locator
+
+    @property
+    def container_setup_funcs(self) -> list[Callable[[Any], None]]:
+        """
+        Read-only access to container setup functions.
+
+        These functions are discovered by scan() when a module defines a
+        `svcs_container` function. They are called for each new HopscotchContainer
+        instance during __attrs_post_init__.
+
+        Returns:
+            List of callable setup functions that take a container as argument.
+        """
+        return self._container_setup_funcs
 
     def register_implementation(
         self,
@@ -197,11 +215,16 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
     )
 
     def __attrs_post_init__(self) -> None:
-        """Auto-register location as local value."""
+        """Auto-register location and invoke container setup functions."""
         from svcs_di.injectors.locator import Location
 
         if self.location is not None:
             self.register_local_value(Location, self.location)
+
+        # Invoke container setup functions if registry is HopscotchRegistry
+        if isinstance(self.registry, HopscotchRegistry):
+            for setup_func in self.registry.container_setup_funcs:
+                setup_func(self)
 
     def inject[T](
         self, svc_type: type[T], /, resource: type | None = None, **kwargs: Any

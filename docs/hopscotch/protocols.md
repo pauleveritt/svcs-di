@@ -41,13 +41,13 @@ Define a Protocol as the service contract. Include both attributes and methods:
 :end-at: ...
 ```
 
-### Defining a Resource Protocol
+### Defining a Resource Base Class
 
-Resources can also be Protocols. This lets you vary implementations based on the *type* of resource in the container,
+Resources can be typed classes. This lets you vary implementations based on the *type* of resource in the container,
 not just a specific class:
 
 ```{literalinclude} ../../examples/hopscotch/protocols.py
-:start-at: class Resource(Protocol)
+:start-at: class BaseResource
 :end-at: first_name: str
 ```
 
@@ -74,7 +74,7 @@ is selected:
 
 ```{literalinclude} ../../examples/hopscotch/protocols.py
 :start-at: Register implementations under the Greeting protocol
-:end-at: resource=EmployeeResource
+:end-at: resource=Employee
 ```
 
 ### Resource-Based Selection
@@ -89,10 +89,10 @@ container and checks what *type* it actually is. Different resource types select
 :end-at: assert service.greeting.salutation == "Hello"
 ```
 
-**Request 2** - `EmployeeResource` in container → selects `EmployeeGreeting`:
+**Request 2** - `Employee` in container → selects `EmployeeGreeting`:
 
 ```{literalinclude} ../../examples/hopscotch/protocols.py
-:start-at: Request 2: EmployeeResource
+:start-at: Request 2: Employee
 :end-at: assert service.greeting.salutation == "Hey"
 ```
 

@@ -34,7 +34,6 @@ from svcs_di.injectors.decorators import injectable
 from svcs_di.injectors.locator import (
     HopscotchAsyncInjector,
     HopscotchInjector,
-    Location,
     ServiceLocator,
     scan,
 )
@@ -398,10 +397,10 @@ def test_hopscotch_injector_location_based_resolution():
         try:
             registry = svcs.Registry()
             registry.register_value(ServiceLocator, locator)
-            registry.register_value(Location, location)
 
             container = svcs.Container(registry)
-            injector = HopscotchInjector(container=container)
+            # Pass location directly to injector
+            injector = HopscotchInjector(container=container, location=location)
 
             for _ in range(50):
                 service = injector(Service)

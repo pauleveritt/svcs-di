@@ -26,10 +26,40 @@ A thread-safe, immutable registry for multiple service implementations:
 
 Select implementations based on business context types:
 
-- **Exact match**: `CustomerContext` matches registrations for `CustomerContext`
-- **Subclass match**: `ManagerContext(EmployeeContext)` matches `EmployeeContext` registrations
+- **Exact match**: `Customer` matches registrations for `Customer`
+- **Subclass match**: `Manager(Employee)` matches `Employee` registrations
 - **Default fallback**: No resource matches registrations without a resource constraint
 - **Three-tier precedence**: exact (100 points) > subclass (10 points) > default (0 points)
+
+#### Container API for Resources
+
+Pass resource instances directly to `HopscotchContainer`:
+
+```python
+# Pass resource instance to container
+container = HopscotchContainer(registry, resource=Employee())
+service = container.inject(WelcomeService)  # Uses Employee for matching
+```
+
+The container automatically derives `type(resource)` for ServiceLocator matching.
+
+#### Injecting Resources with Resource[T]
+
+Services can access the current resource via `Resource[T]`:
+
+```python
+from svcs_di import Resource
+
+@dataclass
+class AuditService:
+    employee: Resource[Employee]  # Gets container.resource, typed as Employee
+```
+
+This separates concerns from `Inject[T]`:
+- `Inject[T]` = "resolve service of type T from registry"
+- `Resource[T]` = "give me the current resource, typed as T"
+
+The type parameter is for static type checking only - at runtime, the injector returns `container.resource`.
 
 ### Location-Based Resolution
 
@@ -39,6 +69,33 @@ Select implementations based on hierarchical URL-like paths:
 - **Hierarchical fallback**: `/admin/users/profile` walks up to `/admin/users`, then `/admin`, then `/`
 - **Location as service**: Inject `Location` to access the current request path
 - **Combined matching**: Use both resource and location for fine-grained control
+
+#### Container API for Locations
+
+Pass location directly to `HopscotchContainer`:
+
+```python
+from pathlib import PurePath
+
+# New API: pass location to container
+container = HopscotchContainer(registry, location=PurePath("/admin"))
+service = container.inject(PageRenderer)  # Uses /admin for location matching
+```
+
+The container automatically registers the location for both injection and ServiceLocator matching.
+
+#### Combined Resource and Location
+
+Use both for fine-grained context:
+
+```python
+container = HopscotchContainer(
+    registry,
+    resource=Employee(),
+    location=PurePath("/admin")
+)
+service = container.inject(WelcomeService)
+```
 
 ### Three-Tier Value Precedence
 

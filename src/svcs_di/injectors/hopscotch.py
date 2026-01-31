@@ -65,11 +65,11 @@ def _try_resolve_from_locator_sync(
         )
         if implementation is not None:
             # Construct instance using the injector recursively (for nested injection)
-            return (True, injector_callable(implementation))
+            return True, injector_callable(implementation)
     except svcs.exceptions.ServiceNotFoundError:
         pass  # No locator registered
 
-    return (False, None)
+    return False, None
 
 
 async def _try_resolve_from_locator_async(
@@ -109,11 +109,11 @@ async def _try_resolve_from_locator_async(
         )
         if implementation is not None:
             # Construct instance using the injector recursively (for nested injection)
-            return (True, await injector_callable(implementation))
+            return True, await injector_callable(implementation)
     except svcs.exceptions.ServiceNotFoundError:
         pass  # No locator registered
 
-    return (False, None)
+    return False, None
 
 
 def _resolve_from_container_with_fallback_sync(
@@ -189,28 +189,8 @@ class HopscotchInjector:
     """
 
     container: svcs.Container
-    resource: type | None = None  # Optional: type to get from container for resource
-
-    def _get_resource(self) -> type | None:
-        """Get the resource type from container if resource is configured."""
-        if self.resource is None:
-            return None
-
-        try:
-            resource_instance = self.container.get(self.resource)
-            return type(resource_instance)
-        except svcs.exceptions.ServiceNotFoundError:
-            return None
-
-    def _get_location(self) -> PurePath | None:
-        """Get the Location from container if registered."""
-        # Import here to avoid circular dependency
-        from svcs_di.injectors.locator import Location
-
-        try:
-            return self.container.get(Location)
-        except svcs.exceptions.ServiceNotFoundError:
-            return None
+    resource: type | None = None  # Resource type for ServiceLocator matching
+    location: PurePath | None = None  # Location for ServiceLocator matching
 
     def _resolve_field_value_sync(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
@@ -223,7 +203,14 @@ class HopscotchInjector:
         """
         # Tier 1: kwargs (highest priority)
         if field_info.name in kwargs:
-            return (True, kwargs[field_info.name])
+            return True, kwargs[field_info.name]
+
+        # Resource[T] injection - return container's resource instance
+        if field_info.is_resource:
+            resource_instance = getattr(self.container, "resource", None)
+            if resource_instance is not None:
+                return True, resource_instance
+            # No resource available - fall through to default handling
 
         # Tier 2: Inject from container (with locator support)
         if field_info.is_injectable:
@@ -232,30 +219,28 @@ class HopscotchInjector:
 
             # Check for Container injection first (bypasses locator)
             if field_info.inner_type is svcs.Container:
-                return (True, self.container)
+                return True, self.container
 
             # Try locator first for types with multiple implementations
-            resource_type = self._get_resource()
-            location = self._get_location()
             found, value = _try_resolve_from_locator_sync(
-                field_info, self.container, resource_type, location, self
+                field_info, self.container, self.resource, self.location, self
             )
             if found:
-                return (True, value)
+                return True, value
 
             # Fall back to standard container resolution
             found, value = _resolve_from_container_with_fallback_sync(
                 field_info, self.container
             )
             if found:
-                return (True, value)
+                return True, value
 
         # Tier 3: default value
         if field_info.has_default:
             return True, resolve_default_value(field_info.default_value)
 
         # No value found at any tier
-        return (False, None)
+        return False, None
 
     def __call__[T](self, target: InjectionTarget[T], **kwargs: Any) -> T:
         """
@@ -299,28 +284,8 @@ class HopscotchAsyncInjector:
     """
 
     container: svcs.Container
-    resource: type | None = None
-
-    async def _get_resource(self) -> type | None:
-        """Get the resource type from container if resource is configured."""
-        if self.resource is None:
-            return None
-
-        try:
-            resource_instance = await self.container.aget(self.resource)
-            return type(resource_instance)
-        except svcs.exceptions.ServiceNotFoundError:
-            return None
-
-    async def _get_location(self) -> PurePath | None:
-        """Get the Location from container if registered."""
-        # Import here to avoid circular dependency
-        from svcs_di.injectors.locator import Location
-
-        try:
-            return await self.container.aget(Location)
-        except svcs.exceptions.ServiceNotFoundError:
-            return None
+    resource: type | None = None  # Resource type for ServiceLocator matching
+    location: PurePath | None = None  # Location for ServiceLocator matching
 
     async def _resolve_field_value_async(
         self, field_info: FieldInfo, kwargs: dict[str, Any]
@@ -333,7 +298,14 @@ class HopscotchAsyncInjector:
         """
         # Tier 1: kwargs (highest priority)
         if field_info.name in kwargs:
-            return (True, kwargs[field_info.name])
+            return True, kwargs[field_info.name]
+
+        # Resource[T] injection - return container's resource instance
+        if field_info.is_resource:
+            resource_instance = getattr(self.container, "resource", None)
+            if resource_instance is not None:
+                return True, resource_instance
+            # No resource available - fall through to default handling
 
         # Tier 2: Inject from container (async, with locator support)
         if field_info.is_injectable:
@@ -342,30 +314,28 @@ class HopscotchAsyncInjector:
 
             # Check for Container injection first (bypasses locator)
             if field_info.inner_type is svcs.Container:
-                return (True, self.container)
+                return True, self.container
 
             # Try locator first for types with multiple implementations
-            resource_type = await self._get_resource()
-            location = await self._get_location()
             found, value = await _try_resolve_from_locator_async(
-                field_info, self.container, resource_type, location, self
+                field_info, self.container, self.resource, self.location, self
             )
             if found:
-                return (True, value)
+                return True, value
 
             # Fall back to standard async container resolution
             found, value = await _resolve_from_container_with_fallback_async(
                 field_info, self.container
             )
             if found:
-                return (True, value)
+                return True, value
 
         # Tier 3: default value
         if field_info.has_default:
             return True, resolve_default_value(field_info.default_value)
 
         # No value found at any tier
-        return (False, None)
+        return False, None
 
     async def __call__[T](self, target: AsyncInjectionTarget[T], **kwargs: Any) -> T:
         """

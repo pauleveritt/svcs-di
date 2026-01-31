@@ -54,16 +54,51 @@ Compare this to the manual approach in `resource_resolution_manual.py` which req
 
 ### Resource-Based Resolution
 
-Pass the `resource` parameter to `container.inject()` to enable resource-based selection:
+Pass the `resource` instance directly to `HopscotchContainer` to enable resource-based selection:
 
 ```{literalinclude} ../../examples/hopscotch/resource_resolution.py
-:start-at: Request 2: EmployeeContext
-:end-at: assert service.greeting.salutation
+:start-at: Request 2: With resource instance
+:end-at: assert service.greeting.salutation == "Hey"
 ```
+
+The container automatically derives `type(resource)` for ServiceLocator matching.
 
 For all other cases, when there is no resource, the default implementation is used:
 
 ```{literalinclude} ../../examples/hopscotch/resource_resolution.py
 :start-at: Request 1
-:end-at: assert service.greeting.salutation
+:end-at: assert service.greeting.salutation == "Hello"
+```
+
+### Accessing the Resource with Resource[T]
+
+Services can access the current resource via `Resource[T]`:
+
+```python
+from svcs_di import Resource
+
+@dataclass
+class ResourceAwareService:
+    resource: Resource[Employee]  # Gets container.resource, typed as Employee
+```
+
+This separates concerns from `Inject[T]`:
+- `Inject[T]` = "resolve service of type T from registry"
+- `Resource[T]` = "give me the current resource, I expect type T"
+
+The type parameter `T` is for static type checking only - at runtime, the injector simply returns
+`container.resource` regardless of `T`.
+
+```{literalinclude} ../../examples/hopscotch/resource_resolution.py
+:start-at: Request 3: ResourceAwareService
+:end-at: aware_service.welcome("Alice")
+```
+
+### Override Resource Type
+
+You can override the resource type used for ServiceLocator matching by passing it to `inject()`:
+
+```{literalinclude} ../../examples/hopscotch/resource_resolution.py
+:start-at: Request 4: Override resource
+:end-at: assert service.greeting.salutation == "Hello"
 ```

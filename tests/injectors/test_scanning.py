@@ -178,14 +178,13 @@ def test_scan_phase_is_context_agnostic():
     assert metadata["resource"] == service_b.CustomerContext
 
 
-def test_hopscotch_injector_resolves_context_at_request_time():
+def test_hopscotch_injector_uses_resource_type_directly():
     """
-    Test that HopscotchInjector resolves context at request time, not scan time.
+    Test that HopscotchInjector uses resource type directly for ServiceLocator matching.
 
-    Task 4.3: Verify request-time context resolution
-    - HopscotchInjector._get_resource() obtains resource at request time
-    - Resource obtained from container.get(self.resource)
-    - Type of resource instance determines resolution path
+    Task 4.3: Verify resource type usage
+    - HopscotchInjector.resource stores the resource type directly
+    - The type is typically derived from HopscotchContainer's stored resource instance
     """
     from tests.test_fixtures.scanning_test_package.service_b import (
         CustomerContext,
@@ -195,21 +194,12 @@ def test_hopscotch_injector_resolves_context_at_request_time():
     registry = svcs.Registry()
     scan(registry, "tests.test_fixtures.scanning_test_package.service_b")
 
-    # Register context in container
-    registry.register_value(RequestContext, CustomerContext())
-
-    # Create container and injector
+    # Create container and injector with resource type directly
     container = svcs.Container(registry)
+    injector = HopscotchInjector(container=container, resource=CustomerContext)
 
-    # NOW context resolution happens via HopscotchInjector
-    injector = HopscotchInjector(container=container, resource=RequestContext)
-
-    # Verify _get_resource() obtains resource from container
-    resource_type = injector._get_resource()
-    assert resource_type == CustomerContext
-
-    # Verify context was resolved at request time (not scan time)
-    assert resource_type is not None
+    # Verify resource attribute stores the resource type directly
+    assert injector.resource == CustomerContext
 
 
 def test_resource_matching_three_tier_precedence():
@@ -383,9 +373,9 @@ def test_scan_with_hopscotch_injector_type():
 
 def test_context_resolution_timing():
     """
-    Test that context is resolved at request time via HopscotchInjector, NOT during scan.
+    Test that context is used at request time via HopscotchInjector, NOT during scan.
 
-    Task 4.2 & 4.3: Verify timing of context resolution
+    Task 4.2 & 4.3: Verify timing of context usage
     """
     from tests.test_fixtures.scanning_test_package.service_b import (
         CustomerContext,
@@ -396,19 +386,17 @@ def test_context_resolution_timing():
     registry = svcs.Registry()
     scan(registry, "tests.test_fixtures.scanning_test_package.service_b")
 
-    # At this point, NO context has been resolved
+    # At this point, NO context has been used
     # Only metadata has been stored
 
-    # Phase 2: Request time (context resolution happens NOW)
-    registry.register_value(RequestContext, CustomerContext())
+    # Phase 2: Request time (context is used NOW)
     container = svcs.Container(registry)
 
-    # Create HopscotchInjector with resource
-    injector = HopscotchInjector(container=container, resource=RequestContext)
+    # Create HopscotchInjector with resource type directly
+    injector = HopscotchInjector(container=container, resource=CustomerContext)
 
-    # NOW _get_resource() is called and context is resolved
-    resource_type = injector._get_resource()
-    assert resource_type == CustomerContext
+    # resource attribute stores the resource type directly
+    assert injector.resource == CustomerContext
 
     # Verify locator can find ServiceB with CustomerContext
     locator = container.get(ServiceLocator)

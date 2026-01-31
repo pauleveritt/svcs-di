@@ -156,31 +156,37 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
 
     HopscotchContainer adds inject() and ainject() methods that use HopscotchInjector
     for dependency resolution with ServiceLocator-based multi-implementation support.
-    Resource and location resolution is delegated to the HopscotchInjector via its
-    _get_resource() and _get_location() methods.
 
     Attributes:
         registry: The svcs.Registry instance (inherited from svcs.Container).
+        resource: Optional resource instance for resource-based resolution.
+            When provided, the resource is automatically registered as a local value
+            under both the Resource marker type and its concrete type, and its type
+            is used for ServiceLocator matching.
+        location: Optional location (PurePath) for location-based resolution.
+            When provided, the location is automatically registered as a local value
+            under the Location type.
         injector: The synchronous injector class to use for inject().
             Defaults to HopscotchInjector.
         async_injector: The asynchronous injector class to use for ainject().
             Defaults to HopscotchAsyncInjector.
 
-    Note:
-        Unlike InjectorContainer, HopscotchContainer does not store a resource
-        attribute. Resource resolution is handled dynamically by the injector.
-
     Example:
         >>> registry = HopscotchRegistry()
         >>> registry.register_implementation(Greeting, DefaultGreeting)
         >>> registry.register_implementation(Greeting, AdminGreeting, location=PurePath("/admin"))
-        >>> container = HopscotchContainer(registry)
-        >>> # Standard svcs.Container behavior
-        >>> locator = container.get(ServiceLocator)
-        >>> # With injection via HopscotchInjector
-        >>> service = container.inject(WelcomeService)
+        >>> registry.register_implementation(Greeting, EmployeeGreeting, resource=EmployeeContext)
+        >>> # New API: pass resource and location to container
+        >>> container = HopscotchContainer(registry, resource=EmployeeContext(), location=PurePath("/admin"))
+        >>> service = container.inject(WelcomeService)  # Uses EmployeeContext for matching
+        >>> # Services can inject Resource or Location
+        >>> # resource: Inject[Resource]  # Gets EmployeeContext instance (generic)
+        >>> # resource: Inject[EmployeeContext]  # Gets EmployeeContext instance (type-safe)
+        >>> # location: Inject[Location]  # Gets PurePath("/admin")
     """
 
+    resource: Any = attrs.field(default=None, kw_only=True)
+    location: PurePath | None = attrs.field(default=None, kw_only=True)
     injector: type[HopscotchInjector] | None = attrs.field(
         default=HopscotchInjector,
         kw_only=True,
@@ -189,6 +195,13 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
         default=HopscotchAsyncInjector,
         kw_only=True,
     )
+
+    def __attrs_post_init__(self) -> None:
+        """Auto-register location as local value."""
+        from svcs_di.injectors.locator import Location
+
+        if self.location is not None:
+            self.register_local_value(Location, self.location)
 
     def inject[T](
         self, svc_type: type[T], /, resource: type | None = None, **kwargs: Any
@@ -202,8 +215,9 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
         Args:
             svc_type: The service type to resolve (positional-only).
             resource: Optional resource type for resource-based resolution.
-                When provided, the injector looks up this type from the container
-                to determine which implementation to use.
+                When provided, overrides the container's stored resource for
+                ServiceLocator matching. If not provided and the container has
+                a stored resource, its type is used automatically.
             **kwargs: Keyword arguments to override injected dependencies.
 
         Returns:
@@ -213,19 +227,27 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
             ValueError: If no injector is configured.
 
         Examples:
-            Basic injection (uses locator-based resolution):
-                >>> service = container.inject(WelcomeService)  # doctest: +SKIP
+            With container resource (automatic type derivation):
+                >>> container = HopscotchContainer(registry, resource=EmployeeContext())
+                >>> service = container.inject(WelcomeService)  # Uses EmployeeContext
 
-            With resource-based resolution:
-                >>> service = container.inject(WelcomeService, resource=EmployeeContext)  # doctest: +SKIP
+            With explicit resource override:
+                >>> service = container.inject(WelcomeService, resource=VIPContext)
 
             With kwargs override:
-                >>> service = container.inject(WelcomeService, greeting=mock_greeting)  # doctest: +SKIP
+                >>> service = container.inject(WelcomeService, greeting=mock_greeting)
 
         See Also:
             HopscotchInjector: For details on locator-based resolution and precedence.
         """
-        return self._do_inject(svc_type, {"resource": resource}, **kwargs)
+        effective_resource = resource
+        if effective_resource is None and self.resource is not None:
+            effective_resource = type(self.resource)
+        return self._do_inject(
+            svc_type,
+            {"resource": effective_resource, "location": self.location},
+            **kwargs,
+        )
 
     async def ainject[T](
         self, svc_type: type[T], /, resource: type | None = None, **kwargs: Any
@@ -239,8 +261,9 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
         Args:
             svc_type: The service type to resolve (positional-only).
             resource: Optional resource type for resource-based resolution.
-                When provided, the injector looks up this type from the container
-                to determine which implementation to use.
+                When provided, overrides the container's stored resource for
+                ServiceLocator matching. If not provided and the container has
+                a stored resource, its type is used automatically.
             **kwargs: Keyword arguments to override injected dependencies.
 
         Returns:
@@ -250,16 +273,24 @@ class HopscotchContainer(InjectorMixin, svcs.Container):
             ValueError: If no async_injector is configured.
 
         Examples:
-            Basic async injection:
-                >>> service = await container.ainject(WelcomeService)  # doctest: +SKIP
+            With container resource (automatic type derivation):
+                >>> container = HopscotchContainer(registry, resource=EmployeeContext())
+                >>> service = await container.ainject(WelcomeService)  # Uses EmployeeContext
 
-            With resource-based resolution:
-                >>> service = await container.ainject(WelcomeService, resource=EmployeeContext)  # doctest: +SKIP
+            With explicit resource override:
+                >>> service = await container.ainject(WelcomeService, resource=VIPContext)
 
             With kwargs override:
-                >>> service = await container.ainject(WelcomeService, greeting=mock_greeting)  # doctest: +SKIP
+                >>> service = await container.ainject(WelcomeService, greeting=mock_greeting)
 
         See Also:
             HopscotchAsyncInjector: For details on async locator-based resolution.
         """
-        return await self._do_ainject(svc_type, {"resource": resource}, **kwargs)
+        effective_resource = resource
+        if effective_resource is None and self.resource is not None:
+            effective_resource = type(self.resource)
+        return await self._do_ainject(
+            svc_type,
+            {"resource": effective_resource, "location": self.location},
+            **kwargs,
+        )

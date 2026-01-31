@@ -372,7 +372,7 @@ def test_hopscotch_injector_with_locator_no_context(registry):
 
 
 def test_hopscotch_injector_with_locator_and_context(registry):
-    """Test HopscotchInjector uses resource from container to resolve implementation."""
+    """Test HopscotchInjector uses resource type to resolve implementation."""
 
     @dataclass
     class Service:
@@ -389,11 +389,9 @@ def test_hopscotch_injector_with_locator_and_context(registry):
     )
     registry.register_value(ServiceLocator, locator)
 
-    # Register context in container
-    registry.register_value(RequestContext, EmployeeRequestContext())
-
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container, resource=RequestContext)
+    # Pass resource type directly
+    injector = HopscotchInjector(container=container, resource=EmployeeRequestContext)
 
     service = injector(Service)
     assert isinstance(service.greeting, EmployeeGreeting)
@@ -451,10 +449,10 @@ def test_hopscotch_injector_multiple_injectable_fields(registry):
     )
     locator = locator.register(Database, PostgresDB)
     registry.register_value(ServiceLocator, locator)
-    registry.register_value(RequestContext, EmployeeRequestContext())
 
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container, resource=RequestContext)
+    # Pass resource type directly
+    injector = HopscotchInjector(container=container, resource=EmployeeRequestContext)
 
     service = injector(Service)
     assert isinstance(service.greeting, EmployeeGreeting)
@@ -513,7 +511,7 @@ def test_hopscotch_injector_no_resource_configured(registry):
 
 @pytest.mark.anyio
 async def test_hopscotch_async_injector_with_locator_and_context(registry):
-    """Test HopscotchAsyncInjector uses resource from container to resolve implementation."""
+    """Test HopscotchAsyncInjector uses resource type to resolve implementation."""
 
     @dataclass
     class Service:
@@ -525,10 +523,12 @@ async def test_hopscotch_async_injector_with_locator_and_context(registry):
         Greeting, EmployeeGreeting, resource=EmployeeRequestContext
     )
     registry.register_value(ServiceLocator, locator)
-    registry.register_value(RequestContext, EmployeeRequestContext())
 
     container = svcs.Container(registry)
-    injector = HopscotchAsyncInjector(container=container, resource=RequestContext)
+    # Pass resource type directly
+    injector = HopscotchAsyncInjector(
+        container=container, resource=EmployeeRequestContext
+    )
 
     service = await injector(Service)
     assert isinstance(service.greeting, EmployeeGreeting)
@@ -904,13 +904,11 @@ def test_hopscotch_injector_uses_location_during_resolution(registry):
     locator = locator.register(Greeting, PublicGreeting, location=PurePath("/public"))
     registry.register_value(ServiceLocator, locator)
 
-    # Register Location in container (admin path)
-    registry.register_value(Location, PurePath("/admin"))
-
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container)
+    # Pass location directly to injector
+    injector = HopscotchInjector(container=container, location=PurePath("/admin"))
 
-    # Should resolve to AdminGreeting because Location is /admin
+    # Should resolve to AdminGreeting because location is /admin
     service = injector(Service)
     assert isinstance(service.greeting, AdminGreeting)
     assert service.greeting.salutation == "Admin Portal"
@@ -927,10 +925,10 @@ def test_three_tier_precedence_with_location(registry):
     locator = ServiceLocator()
     locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
     registry.register_value(ServiceLocator, locator)
-    registry.register_value(Location, PurePath("/admin"))
 
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container)
+    # Pass location directly to injector
+    injector = HopscotchInjector(container=container, location=PurePath("/admin"))
 
     # Tier 1: kwargs override should win
     custom_greeting = CustomerGreeting()
@@ -954,23 +952,23 @@ def test_services_restricted_to_location_only_mode(registry):
     locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
     registry.register_value(ServiceLocator, locator)
 
-    # Test 1: With Location set to /admin - should work
-    registry.register_value(Location, PurePath("/admin"))
+    # Test 1: With location set to /admin - should work
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container)
+    # Pass location directly to injector
+    injector = HopscotchInjector(container=container, location=PurePath("/admin"))
 
     service = injector(Service)
     assert isinstance(service.greeting, AdminGreeting)
 
-    # Test 2: With Location set to /public - should fail (service not available)
+    # Test 2: With location set to /public - should fail (service not available)
     registry2 = svcs.Registry()
     locator2 = ServiceLocator()
     locator2 = locator2.register(Greeting, AdminGreeting, location=PurePath("/admin"))
     registry2.register_value(ServiceLocator, locator2)
-    registry2.register_value(Location, PurePath("/public"))
 
     container2 = svcs.Container(registry2)
-    injector2 = HopscotchInjector(container=container2)
+    # Pass location directly to injector
+    injector2 = HopscotchInjector(container=container2, location=PurePath("/public"))
 
     # Should raise because no implementation available at /public location
     with pytest.raises(TypeError):  # No value found at any tier
@@ -990,11 +988,9 @@ def test_location_with_hierarchical_fallback_in_injector(registry):
     locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
     registry.register_value(ServiceLocator, locator)
 
-    # Register child location /admin/users
-    registry.register_value(Location, PurePath("/admin/users"))
-
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container)
+    # Pass child location /admin/users - should fall back to parent /admin
+    injector = HopscotchInjector(container=container, location=PurePath("/admin/users"))
 
     # Should fall back to parent /admin location's service
     service = injector(Service)
@@ -1015,13 +1011,11 @@ async def test_async_injector_uses_location_during_resolution(registry):
     locator = locator.register(Greeting, AdminGreeting, location=PurePath("/admin"))
     registry.register_value(ServiceLocator, locator)
 
-    # Register Location in container
-    registry.register_value(Location, PurePath("/admin"))
-
     container = svcs.Container(registry)
-    injector = HopscotchAsyncInjector(container=container)
+    # Pass location directly to async injector
+    injector = HopscotchAsyncInjector(container=container, location=PurePath("/admin"))
 
-    # Should resolve to AdminGreeting because Location is /admin
+    # Should resolve to AdminGreeting because location is /admin
     service = await injector(Service)
     assert isinstance(service.greeting, AdminGreeting)
     assert service.greeting.salutation == "Admin Portal"
@@ -1055,12 +1049,13 @@ def test_end_to_end_container_creation_to_resolution(registry):
     locator = locator.register(Database, PostgresDB)  # Global database
 
     registry.register_value(ServiceLocator, locator)
-    registry.register_value(Location, PurePath("/public"))
     registry.register_value(CustomerContext, CustomerContext())
 
-    # Create container and injector
+    # Create container and injector with resource and location
     container = svcs.Container(registry)
-    injector = HopscotchInjector(container=container, resource=CustomerContext)
+    injector = HopscotchInjector(
+        container=container, resource=CustomerContext, location=PurePath("/public")
+    )
 
     # Resolve service
     processor = injector(OrderProcessor)

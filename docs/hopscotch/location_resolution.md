@@ -34,6 +34,17 @@ Register implementations at specific paths:
 :end-at: location=PurePath("/public")
 ```
 
+### Container API for Locations
+
+Pass location directly to `HopscotchContainer`:
+
+```{literalinclude} ../../examples/hopscotch/location_resolution.py
+:start-at: Test 1: /public location
+:end-at: assert service.location == PurePath("/public")
+```
+
+The container automatically registers the location for both `Inject[Location]` and ServiceLocator matching.
+
 ### Hierarchical Fallback
 
 Locations follow a hierarchical fallback pattern:
@@ -43,8 +54,8 @@ Locations follow a hierarchical fallback pattern:
 - Falls back to default (no location constraint)
 
 ```{literalinclude} ../../examples/hopscotch/location_resolution.py
-:start-at: "Hierarchical fallback"
-:end-at: 'assert "Thanks for visiting" in service.render("Bob")'
+:start-at: Test 2: Hierarchical fallback
+:end-at: assert service.location == PurePath("/public/gallery")
 ```
 
 ### Location as Injectable Service
@@ -54,4 +65,13 @@ Inject `Location` to access the current path:
 ```{literalinclude} ../../examples/hopscotch/location_resolution.py
 :start-at: class PageRenderer
 :end-at: greeting.greet(name)
+```
+
+### Backward Compatibility
+
+The old `register_local_value` pattern still works:
+
+```{literalinclude} ../../examples/hopscotch/location_resolution.py
+:start-at: Test 4: Backward compatible API
+:end-at: assert service.location == PurePath("/legacy")
 ```

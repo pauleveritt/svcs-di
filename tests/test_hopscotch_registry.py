@@ -14,9 +14,13 @@ import pytest
 import svcs
 
 from svcs_di.auto import Inject
-from svcs_di.hopscotch_registry import HopscotchContainer, HopscotchRegistry
-from svcs_di.injectors.hopscotch import HopscotchAsyncInjector, HopscotchInjector
-from svcs_di.injectors.locator import Location, ServiceLocator
+from svcs_di.injectors import (
+    HopscotchAsyncInjector,
+    HopscotchContainer,
+    HopscotchInjector,
+    HopscotchRegistry,
+    ServiceLocator,
+)
 
 
 # =============================================================================
@@ -458,11 +462,8 @@ def test_end_to_end_registry_container_inject_with_location_resolution() -> None
         Greeting, PublicGreeting, location=PurePath("/public")
     )
 
-    # Register Location in registry so it can be resolved
-    registry.register_value(Location, PurePath("/admin"))
-
-    # Create container and inject
-    container = HopscotchContainer(registry)
+    # Create container with location
+    container = HopscotchContainer(registry, location=PurePath("/admin"))
     service = container.inject(WelcomeService)
 
     # Should get AdminGreeting due to /admin location
@@ -487,10 +488,8 @@ def test_end_to_end_registry_container_inject_hierarchical_location() -> None:
         Greeting, AdminGreeting, location=PurePath("/admin")
     )
 
-    # Register a child location - should still match /admin
-    registry.register_value(Location, PurePath("/admin/users"))
-
-    container = HopscotchContainer(registry)
+    # Create container with child location - should still match /admin
+    container = HopscotchContainer(registry, location=PurePath("/admin/users"))
     service = container.inject(WelcomeService)
 
     # Should get AdminGreeting due to hierarchical location match
@@ -622,9 +621,8 @@ async def test_end_to_end_async_inject_with_location() -> None:
     registry.register_implementation(
         Greeting, AdminGreeting, location=PurePath("/admin")
     )
-    registry.register_value(Location, PurePath("/admin"))
 
-    container = HopscotchContainer(registry)
+    container = HopscotchContainer(registry, location=PurePath("/admin"))
     service = await container.ainject(WelcomeService)
 
     assert isinstance(service.greeting, AdminGreeting)

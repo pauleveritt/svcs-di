@@ -23,16 +23,16 @@ class Greeting(Protocol):
         ...
 
 
-# Protocol for the Resource (request context)
-class Resource(Protocol):
-    """Protocol defining the resource interface."""
+# Base class for resources (request context)
+class BaseResource:
+    """Base class for resources."""
 
     first_name: str
 
 
 # Default resource implementation
 @dataclass
-class DefaultResource:
+class DefaultResource(BaseResource):
     """Default resource for anonymous requests."""
 
     first_name: str = "Guest"
@@ -40,7 +40,7 @@ class DefaultResource:
 
 # Employee resource implementation
 @dataclass
-class EmployeeResource:
+class Employee(BaseResource):
     """Resource for employee requests."""
 
     first_name: str = "Team Member"
@@ -84,20 +84,16 @@ def main() -> WelcomeService:
 
     # Register implementations under the Greeting protocol
     registry.register_implementation(Greeting, DefaultGreeting)
-    registry.register_implementation(
-        Greeting, EmployeeGreeting, resource=EmployeeResource
-    )
+    registry.register_implementation(Greeting, EmployeeGreeting, resource=Employee)
 
-    # Request 1: DefaultResource - gets DefaultGreeting
-    container = HopscotchContainer(registry)
-    container.register_local_value(Resource, DefaultResource())
-    service = container.inject(WelcomeService, resource=Resource)
+    # Request 1: DefaultResource - gets DefaultGreeting (no resource match)
+    container = HopscotchContainer(registry, resource=DefaultResource())
+    service = container.inject(WelcomeService)
     assert service.greeting.salutation == "Hello"
 
-    # Request 2: EmployeeResource - gets EmployeeGreeting
-    container = HopscotchContainer(registry)
-    container.register_local_value(Resource, EmployeeResource(first_name="Alice"))
-    service = container.inject(WelcomeService, resource=Resource)
+    # Request 2: Employee - gets EmployeeGreeting (exact match)
+    container = HopscotchContainer(registry, resource=Employee(first_name="Alice"))
+    service = container.inject(WelcomeService)
     assert service.greeting.salutation == "Hey"
 
     return service

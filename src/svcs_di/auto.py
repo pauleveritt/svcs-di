@@ -237,12 +237,41 @@ Example:
 """
 
 
+type Resource[T] = T
+"""
+Marker type for resource injection.
+
+Use Resource[T] to get the current request resource from HopscotchContainer.
+The type parameter T is for static type checking only - at runtime, the
+injector simply returns the container's resource instance.
+
+This separates concerns from Inject[T]:
+- Inject[T] = "resolve service of type T from registry"
+- Resource[T] = "give me the current resource, I expect type T"
+
+Example:
+    @dataclass
+    class FrenchGreeting(Greeting):
+        customer: Resource[FrenchCustomer]  # Gets container.resource, typed as FrenchCustomer
+
+    @dataclass
+    class GenericService:
+        resource: Resource[Customer]  # Gets container.resource, typed as Customer
+
+    # Usage:
+    container = HopscotchContainer(registry, resource=FrenchCustomer())
+    service = container.inject(FrenchGreeting)
+    # service.customer is the FrenchCustomer instance
+"""
+
+
 class FieldInfo(NamedTuple):
     """Field metadata for both dataclass fields and function parameters."""
 
     name: str
     type_hint: Any
     is_injectable: bool
+    is_resource: bool
     inner_type: type | None
     is_protocol: bool
     has_default: bool
@@ -260,9 +289,15 @@ def is_injectable(type_hint: Any) -> bool:
     return get_origin(type_hint) is Inject
 
 
+def is_resource_type(type_hint: Any) -> bool:
+    """Check if a type hint is Resource[T]."""
+    return get_origin(type_hint) is Resource
+
+
 def extract_inner_type(type_hint: Any) -> type | None:
-    """Extract the inner type from Inject[T]."""
-    if not is_injectable(type_hint):
+    """Extract the inner type from Inject[T] or Resource[T]."""
+    origin = get_origin(type_hint)
+    if origin is not Inject and origin is not Resource:
         return None
     return args[0] if (args := get_args(type_hint)) else None
 
@@ -298,7 +333,7 @@ def _create_field_info(
     Create a FieldInfo instance from field/parameter metadata.
 
     This helper encapsulates the common logic for processing type hints
-    and determining Inject, protocol, and default value information.
+    and determining Inject, Resource, protocol, and default value information.
 
     Args:
         name: Field/parameter name
@@ -308,13 +343,15 @@ def _create_field_info(
         is_init_var_field: Whether this is an InitVar field (passed to __post_init__)
     """
     injectable = is_injectable(type_hint)
-    inner = extract_inner_type(type_hint) if injectable else None
+    resource = is_resource_type(type_hint)
+    inner = extract_inner_type(type_hint) if (injectable or resource) else None
     protocol = is_protocol_type(inner) if inner else False
 
     return FieldInfo(
         name=name,
         type_hint=type_hint,
         is_injectable=injectable,
+        is_resource=resource,
         inner_type=inner,
         is_protocol=protocol,
         has_default=has_default,

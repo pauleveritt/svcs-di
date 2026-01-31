@@ -290,10 +290,9 @@ def test_for_with_hopscotch_injector():
     registry = Registry()
     scan(registry, locals_dict=locals())
 
-    # Test with CustomerContext
-    registry.register_value(RequestContext, CustomerContext())
+    # Test with CustomerContext - pass type directly
     container = Container(registry)
-    injector = HopscotchInjector(container, resource=RequestContext)
+    injector = HopscotchInjector(container, resource=CustomerContext)
 
     service = injector(WelcomeService)
     result = service.welcome("Alice")
@@ -334,10 +333,9 @@ def test_for_with_hopscotch_injector_fallback():
     registry = Registry()
     scan(registry, locals_dict=locals())
 
-    # Test with CustomerContext (no match, should use default)
-    registry.register_value(RequestContext, CustomerContext())
+    # Test with CustomerContext (no match for AdminContext, should use default)
     container = Container(registry)
-    injector = HopscotchInjector(container, resource=RequestContext)
+    injector = HopscotchInjector(container, resource=CustomerContext)
 
     service = injector(WelcomeService)
     result = service.welcome("Bob")
@@ -462,10 +460,9 @@ def test_for_with_nested_dependencies():
     registry = Registry()
     scan(registry, locals_dict=locals())
 
-    # Test with CustomerContext
-    registry.register_value(RequestContext, CustomerContext())
+    # Test with CustomerContext - pass type directly
     container = Container(registry)
-    injector = HopscotchInjector(container, resource=RequestContext)
+    injector = HopscotchInjector(container, resource=CustomerContext)
 
     service = injector(Service)
     result = service.fetch()
@@ -511,10 +508,9 @@ def test_for_with_multiple_injectable_fields():
     registry = Registry()
     scan(registry, locals_dict=locals())
 
-    # Test with CustomerContext
-    registry.register_value(RequestContext, CustomerContext())
+    # Test with CustomerContext - pass type directly
     container = Container(registry)
-    injector = HopscotchInjector(container, resource=RequestContext)
+    injector = HopscotchInjector(container, resource=CustomerContext)
 
     service = injector(MessageService)
     result = service.create_message("Alice")

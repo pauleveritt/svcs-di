@@ -3,6 +3,9 @@
 Shows URL-path-like service selection using PurePath locations with
 hierarchical fallback. Locations let you register different implementations
 for different parts of your application.
+
+New in this version: HopscotchContainer accepts location directly,
+automatically registering it for injection and ServiceLocator matching.
 """
 
 from dataclasses import dataclass
@@ -52,24 +55,32 @@ def main() -> PageRenderer:
         Greeting, PublicGreeting, location=PurePath("/public")
     )
 
-    # Test 1: /public location - gets PublicGreeting
-    container = HopscotchContainer(registry)
-    container.register_local_value(Location, PurePath("/public"))
+    # Test 1: /public location - gets PublicGreeting (new API)
+    # The container automatically registers location for:
+    # - Inject[Location] dependency injection
+    # - ServiceLocator location-based matching
+    container = HopscotchContainer(registry, location=PurePath("/public"))
     service = container.inject(PageRenderer)
     assert "Thanks for visiting" in service.render("Alice")
+    assert service.location == PurePath("/public")
 
     # Test 2: Hierarchical fallback - /public/gallery falls back to /public
-    container = HopscotchContainer(registry)
-    container.register_local_value(Location, PurePath("/public/gallery"))
+    container = HopscotchContainer(registry, location=PurePath("/public/gallery"))
     service = container.inject(PageRenderer)
     # No /public/gallery registration, falls back to /public
     assert "Thanks for visiting" in service.render("Bob")
+    assert service.location == PurePath("/public/gallery")
 
     # Test 3: Unknown location - falls back to default
-    container = HopscotchContainer(registry)
-    container.register_local_value(Location, PurePath("/unknown"))
+    container = HopscotchContainer(registry, location=PurePath("/unknown"))
     service = container.inject(PageRenderer)
     assert service.greeting.salutation == "Hello"
+
+    # Test 4: Backward compatible API - register_local_value still works
+    container = HopscotchContainer(registry)
+    container.register_local_value(Location, PurePath("/legacy"))
+    service = container.inject(PageRenderer)
+    assert service.location == PurePath("/legacy")
 
     return service
 

@@ -269,11 +269,12 @@ def test_create_field_info_defaults_init_var_false():
 
 def test_field_info_is_init_var_has_default():
     """FieldInfo.is_init_var has default value of False."""
-    # Create FieldInfo with only required fields (backward compat)
+    # Create FieldInfo with required fields
     info = FieldInfo(
         name="test",
         type_hint=int,
         is_injectable=False,
+        is_resource=False,
         inner_type=None,
         is_protocol=False,
         has_default=False,

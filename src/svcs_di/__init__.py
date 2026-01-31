@@ -8,6 +8,7 @@ Key exports:
 - auto: Factory function generator for automatic dependency injection
 - auto_async: Async factory function generator for async dependencies
 - Inject: Type marker for parameters that should be injected from container
+- Resource: Type marker for resource injection from HopscotchContainer
 - Injector: Protocol defining the injector interface
 - AsyncInjector: Protocol defining the async injector interface
 - DefaultInjector: Default synchronous injector implementation
@@ -24,6 +25,7 @@ from svcs_di.auto import (
     Inject,
     InjectionTarget,
     Injector,
+    Resource,
     auto,
     auto_async,
 )
@@ -32,6 +34,7 @@ __all__ = [
     "auto",
     "auto_async",
     "Inject",
+    "Resource",
     "Injector",
     "AsyncInjector",
     "DefaultInjector",

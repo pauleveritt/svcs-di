@@ -72,11 +72,31 @@
     functions, both for manual registrations and decorator. Have examples for DefaultInjector, KeywordInjector, and
     HopscotchInjector, plus docs for the examples.
 
-17. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
+17. [x] Inject in post init — Support a pattern where you extract the minimum needed from an injectable by using
+    dataclass features: `InitVar[Inject[T]]` for dependencies needed only during init, optional fields (
+    `T | None = None`)
+    for values with fallback behavior, and `__post_init__` to compute values. For example:
+
+    ```python
+    @dataclass
+    class MyService:
+        other_service: InitVar[Inject[OtherService]]
+        final_value: int | None = None  # Allows override via kwargs
+
+        def __post_init__(self, other_service: OtherService) -> None:
+            if self.final_value is None:
+                self.final_value = other_service.value + 1
+    ```
+
+18. [ ] `svcs_setup` For Container — We currently have a `svcs_setup` function to let "sites" extend the registry. We
+    need the same for containers. Perhaps another function. Perhaps the current function returns a function that can go
+    in the registry, and is then looked up when making the container to find all the setup functions.
+
+19. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
     context/location matching, add benchmarks comparing with plain `svcs` and other DI approaches, document performance
     characteristics and trade-offs. `M`
 
-18. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
+20. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
     features like operators, configuration injection, and enhanced metadata, re-imagined to avoid import-time instance
     construction (perhaps using generics). Keep as optional module. Look in ` `L`
 

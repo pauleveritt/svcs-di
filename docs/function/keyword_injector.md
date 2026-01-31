@@ -26,7 +26,8 @@ Here is a minimal doctest-compatible example showing the three-tier precedence:
 ```python
 >>> from dataclasses import dataclass
 >>> from svcs import Container, Registry
->>> from svcs_di import KeywordInjector, Inject
+>>> from svcs_di import Inject
+>>> from svcs_di.injectors import KeywordInjector
 
 >>> @dataclass
 ... class Config:

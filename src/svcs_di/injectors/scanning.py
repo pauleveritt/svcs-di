@@ -177,9 +177,9 @@ def _caller_package(level: int = 2) -> ModuleType | None:
     if module is None:
         return None
 
-    # Check if this module is itself a package (has __init__.py)
-    module_file = getattr(module, "__file__", "")
-    if "__init__.py" in module_file or "__init__$py" in module_file:
+    # Check if this module is itself a package (has __path__ attribute)
+    # This works for both regular packages (with __init__.py) and namespace packages (PEP 420)
+    if hasattr(module, "__path__"):
         return module
 
     # Not a package, go up one level to get the containing package

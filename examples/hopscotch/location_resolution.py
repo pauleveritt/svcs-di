@@ -8,8 +8,8 @@ for different parts of your application.
 from dataclasses import dataclass
 from pathlib import PurePath
 
-from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
-from svcs_di.injectors.locator import Location
+from svcs_di import Inject
+from svcs_di.injectors import HopscotchContainer, HopscotchRegistry, Location
 
 
 @dataclass

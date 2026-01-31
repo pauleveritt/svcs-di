@@ -7,7 +7,8 @@ from dataclasses import dataclass
 
 from svcs import Registry
 
-from svcs_di import Inject, InjectorContainer
+from svcs_di import Inject
+from svcs_di.injector_container import InjectorContainer
 
 
 @dataclass

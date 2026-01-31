@@ -10,7 +10,7 @@ from svcs_di.auto import (
     DefaultInjector,
     Inject,
 )
-from svcs_di.injectors.keyword import KeywordAsyncInjector, KeywordInjector
+from svcs_di.injectors import KeywordAsyncInjector, KeywordInjector
 from svcs_di.injectors.locator import (
     HopscotchAsyncInjector,
     HopscotchInjector,

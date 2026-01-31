@@ -498,3 +498,24 @@ def test_scan_with_locals_dict_skips_module_scanning():
     container = svcs.Container(registry)
     service = container.get(OnlyLocal)
     assert service.value == "local"
+
+
+def test_scan_namespace_package():
+    """Test scan() works with namespace packages (PEP 420, no __init__.py)."""
+    registry = svcs.Registry()
+
+    # Scan a namespace package (no __init__.py)
+    result = scan(registry, "tests.test_fixtures.namespace_package")
+
+    assert result is registry
+
+    # Verify decorated class was discovered
+    from tests.test_fixtures.namespace_package.services import NamespaceService
+
+    assert hasattr(NamespaceService, "__injectable_metadata__")
+
+    # Verify service was registered and can be resolved
+    container = svcs.Container(registry)
+    service = container.get(NamespaceService)
+    assert isinstance(service, NamespaceService)
+    assert service.name == "NamespaceService"

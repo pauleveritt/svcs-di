@@ -14,9 +14,8 @@ Key concepts:
 
 from dataclasses import dataclass
 
-from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
-from svcs_di.injectors.decorators import injectable
-from svcs_di.injectors.scanning import scan
+from svcs_di import Inject
+from svcs_di.injectors import HopscotchContainer, HopscotchRegistry, injectable, scan
 
 
 # ============================================================================

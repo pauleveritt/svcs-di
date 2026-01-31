@@ -18,8 +18,8 @@ from dataclasses import dataclass
 
 from svcs import Container, Registry
 
-from svcs_di import Inject, KeywordInjector
-from svcs_di.injectors.decorators import injectable
+from svcs_di import Inject
+from svcs_di.injectors import KeywordInjector, injectable
 
 
 # ============================================================================

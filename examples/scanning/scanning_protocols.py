@@ -9,9 +9,8 @@ Shows the recommended pattern for large-scale systems:
 from dataclasses import dataclass
 from typing import Protocol
 
-from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
-from svcs_di.injectors.decorators import injectable
-from svcs_di.injectors.scanning import scan
+from svcs_di import Inject
+from svcs_di.injectors import HopscotchContainer, HopscotchRegistry, injectable, scan
 
 
 # Step 1: Define Protocols as service contracts

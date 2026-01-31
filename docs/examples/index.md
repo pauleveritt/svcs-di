@@ -35,6 +35,9 @@ The examples progress from simple dependency injection patterns to advanced cust
 10. **[Scanning Examples](scanning.md)** - *Intermediate-Advanced*
     Automatically discover and register services using the `@injectable` decorator and `scan()` function.
 
+11. **[InitVar Injection](init_var.md)** - *Intermediate*
+    Use `InitVar[Inject[T]]` to inject dependencies only during initialization for computing derived values.
+
 ## Getting Started
 
 If you're new to svcs-di, start with the [Basic Dataclass Injection](basic_injection.md) example and work your way
@@ -56,4 +59,5 @@ kwargs_override
 custom_injector
 multiple_implementations
 scanning
+init_var
 ```

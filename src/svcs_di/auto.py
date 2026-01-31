@@ -247,6 +247,7 @@ class FieldInfo(NamedTuple):
     is_protocol: bool
     has_default: bool
     default_value: Any
+    is_init_var: bool = False
 
 
 # ============================================================================
@@ -271,17 +272,40 @@ def is_protocol_type(cls: type | Any) -> bool:
     return isinstance(cls, type) and getattr(cls, "_is_protocol", False)
 
 
+def is_init_var(type_hint: Any) -> bool:
+    """Check if a type hint is InitVar[T]."""
+    # InitVar[T] creates an InitVar instance with a .type attribute
+    return isinstance(type_hint, dataclasses.InitVar)
+
+
+def unwrap_init_var(type_hint: Any) -> Any | None:
+    """Extract T from InitVar[T]."""
+    if not is_init_var(type_hint):
+        return None
+    # InitVar stores the type in the .type attribute
+    return type_hint.type if hasattr(type_hint, "type") else None
+
+
 def _create_field_info(
     name: str,
     type_hint: Any,
     has_default: bool,
     default_value: Any,
+    *,
+    is_init_var_field: bool = False,
 ) -> FieldInfo:
     """
     Create a FieldInfo instance from field/parameter metadata.
 
     This helper encapsulates the common logic for processing type hints
     and determining Inject, protocol, and default value information.
+
+    Args:
+        name: Field/parameter name
+        type_hint: The type annotation
+        has_default: Whether a default value exists
+        default_value: The default value if any
+        is_init_var_field: Whether this is an InitVar field (passed to __post_init__)
     """
     injectable = is_injectable(type_hint)
     inner = extract_inner_type(type_hint) if injectable else None
@@ -295,6 +319,7 @@ def _create_field_info(
         is_protocol=protocol,
         has_default=has_default,
         default_value=default_value,
+        is_init_var=is_init_var_field,
     )
 
 
@@ -343,7 +368,7 @@ def _safe_get_type_hints(target: Any, context_name: str) -> dict[str, Any]:
 
 
 def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
-    """Extract field information from a dataclass."""
+    """Extract field information from a dataclass, including InitVar fields."""
     type_hints = _safe_get_type_hints(target, f"dataclass {target.__name__!r}")
 
     # dataclasses.fields() expects DataclassInstance. We've validated target is a
@@ -351,7 +376,12 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
     # can't narrow based on that runtime check.
     fields = dataclasses.fields(cast(Any, target))
 
+    # Get names of regular fields (to exclude from InitVar scan)
+    regular_field_names = {f.name for f in fields}
+
     field_infos = []
+
+    # Process regular fields
     for field in fields:
         type_hint = type_hints.get(field.name)
 
@@ -368,7 +398,35 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
                 default_value = None
 
         field_infos.append(
-            _create_field_info(field.name, type_hint, has_default, default_value)
+            _create_field_info(
+                field.name,
+                type_hint,
+                has_default,
+                default_value,
+                is_init_var_field=False,
+            )
+        )
+
+    # Process InitVar fields from type hints
+    # dataclasses.fields() excludes InitVar, so we scan type_hints for them
+    for name, type_hint in type_hints.items():
+        if name in regular_field_names:
+            continue  # Already processed as regular field
+        if not is_init_var(type_hint):
+            continue  # Not an InitVar
+
+        # Unwrap InitVar[T] to get T
+        inner_hint = unwrap_init_var(type_hint)
+
+        # InitVar fields have no default (must be provided at construction)
+        field_infos.append(
+            _create_field_info(
+                name,
+                inner_hint,
+                has_default=False,
+                default_value=None,
+                is_init_var_field=True,
+            )
         )
 
     return field_infos

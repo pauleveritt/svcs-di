@@ -122,6 +122,7 @@ def main():
     @dataclass
     class InvalidService:
         """A service with an invalid default timeout."""
+
         db: Inject[Database]
         timeout: int = -10  # Invalid!
 
@@ -132,7 +133,7 @@ def main():
 
     container3 = Container(registry3)
     try:
-        service3 = container3.get(InvalidService)
+        _ = container3.get(InvalidService)
     except ValueError as e:
         print(f"Validation failed as expected: {e}")
 

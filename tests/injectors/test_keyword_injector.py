@@ -7,7 +7,8 @@ from typing import Protocol
 import pytest
 from svcs import Container, Registry
 
-from svcs_di import Inject, Injector, KeywordAsyncInjector, KeywordInjector
+from svcs_di import Inject, Injector
+from svcs_di.injectors import KeywordAsyncInjector, KeywordInjector
 
 
 # Test fixtures

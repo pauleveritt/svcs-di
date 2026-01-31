@@ -8,7 +8,8 @@ explicit contracts that make large-scale replaceable systems reliable.
 from dataclasses import dataclass
 from typing import Protocol
 
-from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
+from svcs_di import Inject
+from svcs_di.injectors import HopscotchContainer, HopscotchRegistry
 
 
 # Protocol for the Greeting service

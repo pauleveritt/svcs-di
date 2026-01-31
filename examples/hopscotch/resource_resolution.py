@@ -6,7 +6,8 @@ but using HopscotchRegistry and HopscotchContainer to simplify setup.
 
 from dataclasses import dataclass
 
-from svcs_di import HopscotchContainer, HopscotchRegistry, Inject
+from svcs_di import Inject
+from svcs_di.injectors import HopscotchContainer, HopscotchRegistry
 
 
 # Resource class
@@ -49,7 +50,7 @@ def main() -> WelcomeService:
     registry.register_implementation(Greeting, Greeting)  # Default
     registry.register_implementation(
         Greeting, EmployeeGreeting, resource=EmployeeContext
-    ) # A variation when talking to an Employee
+    )  # A variation when talking to an Employee
 
     # Request 1: No resource - gets default Greeting
     container = HopscotchContainer(registry)

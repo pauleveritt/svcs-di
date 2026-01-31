@@ -16,7 +16,12 @@ import pytest
 import svcs
 import svcs.exceptions
 
-from svcs_di import Inject, InjectorContainer, KeywordAsyncInjector, KeywordInjector
+from svcs_di import Inject
+from svcs_di.injectors import (
+    InjectorContainer,
+    KeywordAsyncInjector,
+    KeywordInjector,
+)
 
 
 # =============================================================================
@@ -493,22 +498,22 @@ async def test_ainject_svcs_service_not_found_error_propagates_correctly() -> No
 # =============================================================================
 
 
-def test_injector_container_importable_from_svcs_di() -> None:
-    """Test that InjectorContainer can be imported from svcs_di package.
+def test_injector_container_importable_from_svcs_di_injectors() -> None:
+    """Test that InjectorContainer can be imported from svcs_di.injectors.
 
     This verifies that the public API export is correctly configured
-    in __init__.py and the import works as expected.
+    in svcs_di.injectors.__init__.py and the import works as expected.
     """
-    # Import from the top-level package (already imported at module level)
-    from svcs_di import InjectorContainer as ImportedContainer
+    # Import from the injectors subpackage
+    from svcs_di.injectors import InjectorContainer as ImportedContainer
 
     # Verify it's the same class
     assert ImportedContainer is InjectorContainer
 
     # Also verify it's in __all__
-    import svcs_di
+    import svcs_di.injectors
 
-    assert "InjectorContainer" in svcs_di.__all__
+    assert "InjectorContainer" in svcs_di.injectors.__all__
 
 
 def test_injector_container_works_with_keyword_injector() -> None:

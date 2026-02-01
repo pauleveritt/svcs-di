@@ -92,7 +92,7 @@
   `Inject[Resource]` or `Inject[Location]`. You'd make a container with `with HopscotchContainer(registry,
   resource=FrenchCustomer(), location=Location()`.
 
-19. [ ] `svcs_setup` For Container — We currently have a `svcs_setup` function to let "sites" extend the registry. We
+19. [x] `svcs_setup` For Container — We currently have a `svcs_setup` function to let "sites" extend the registry. We
     need the same for containers. Perhaps another function. Perhaps the current function returns a function that can go
     in the registry, and is then looked up when making the container to find all the setup functions.
 

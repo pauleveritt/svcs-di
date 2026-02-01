@@ -73,6 +73,7 @@ class HopscotchRegistry(svcs.Registry):
     _container_setup_funcs: list[Callable[[Any], None]] = attrs.field(
         factory=list, init=False
     )
+    _metadata: dict[str, Any] = attrs.field(factory=dict, init=False)
 
     @property
     def locator(self) -> ServiceLocator:
@@ -104,6 +105,33 @@ class HopscotchRegistry(svcs.Registry):
             List of callable setup functions that take a container as argument.
         """
         return self._container_setup_funcs
+
+    def metadata[T](self, key: str, default_factory: Callable[[], T]) -> T:
+        """
+        Get metadata by key, creating with default_factory if missing.
+
+        This method provides a generic extension point for storing arbitrary
+        metadata on the registry. Each caller defines their own key namespace
+        and default factory for the data structure they need.
+
+        Args:
+            key: Unique key for the metadata (e.g., "tdom.middleware_types")
+            default_factory: Callable that returns a new instance if key not found
+                (e.g., list, dict, set)
+
+        Returns:
+            The metadata value for the key, creating it if not present.
+
+        Example:
+            >>> registry = HopscotchRegistry()
+            >>> # Get or create a list for middleware types
+            >>> middleware_types = registry.metadata("myapp.middleware", list)
+            >>> middleware_types.append(LoggingMiddleware)
+            >>> # Get or create a dict for component middleware
+            >>> component_mw = registry.metadata("myapp.component_mw", dict)
+            >>> component_mw[Button] = {"pre": [logging_mw]}
+        """
+        return self._metadata.setdefault(key, default_factory())
 
     def register_implementation(
         self,

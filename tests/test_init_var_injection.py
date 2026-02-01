@@ -213,7 +213,7 @@ def test_init_var_without_inject_not_resolved():
 
 
 def test_get_field_infos_includes_init_var_fields():
-    """get_field_infos() includes InitVar fields."""
+    """get_field_infos() includes InitVar fields but excludes init=False fields."""
 
     @dataclass
     class ServiceWithBoth:
@@ -226,8 +226,8 @@ def test_get_field_infos_includes_init_var_fields():
     names = {f.name for f in field_infos}
     assert "regular" in names
     assert "init_only" in names
-    # Note: field(init=False) fields are still in dataclasses.fields(), just not passed to __init__
-    assert "derived" in names
+    # field(init=False) fields are excluded since they're not passed to __init__
+    assert "derived" not in names
 
     init_var_field = next(f for f in field_infos if f.name == "init_only")
     assert init_var_field.is_init_var is True

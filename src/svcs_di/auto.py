@@ -277,6 +277,7 @@ class FieldInfo(NamedTuple):
     has_default: bool
     default_value: Any
     is_init_var: bool = False
+    is_default_factory: bool = False
 
 
 # ============================================================================
@@ -328,6 +329,7 @@ def _create_field_info(
     default_value: Any,
     *,
     is_init_var_field: bool = False,
+    is_default_factory: bool = False,
 ) -> FieldInfo:
     """
     Create a FieldInfo instance from field/parameter metadata.
@@ -341,6 +343,7 @@ def _create_field_info(
         has_default: Whether a default value exists
         default_value: The default value if any
         is_init_var_field: Whether this is an InitVar field (passed to __post_init__)
+        is_default_factory: Whether the default_value is a factory callable
     """
     injectable = is_injectable(type_hint)
     resource = is_resource_type(type_hint)
@@ -357,6 +360,7 @@ def _create_field_info(
         has_default=has_default,
         default_value=default_value,
         is_init_var=is_init_var_field,
+        is_default_factory=is_default_factory,
     )
 
 
@@ -420,6 +424,10 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
 
     # Process regular fields
     for field in fields:
+        # Skip fields not in __init__
+        if not field.init:
+            continue
+
         type_hint = type_hints.get(field.name)
 
         has_default = (
@@ -429,10 +437,13 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
         match (field.default, field.default_factory):
             case (d, _) if d is not dataclasses.MISSING:
                 default_value = d
+                is_factory = False
             case (_, f) if f is not dataclasses.MISSING:
                 default_value = f
+                is_factory = True
             case _:
                 default_value = None
+                is_factory = False
 
         field_infos.append(
             _create_field_info(
@@ -441,6 +452,7 @@ def _get_dataclass_field_infos(target: type) -> list[FieldInfo]:
                 has_default,
                 default_value,
                 is_init_var_field=False,
+                is_default_factory=is_factory,
             )
         )
 
@@ -567,8 +579,8 @@ def _resolve_field_value(
     # Tier 2: default value
     if field_info.has_default:
         default_val = field_info.default_value
-        # Call default_factory if it's a callable (bound method from dataclass field)
-        if callable(default_val) and hasattr(default_val, "__self__"):
+        # Only call if this is a default_factory (not a static callable default)
+        if field_info.is_default_factory and callable(default_val):
             return True, default_val()
         return True, default_val
 
@@ -605,8 +617,8 @@ async def _resolve_field_value_async(
     # Tier 2: default value
     if field_info.has_default:
         default_val = field_info.default_value
-        # Call default_factory if it's a callable (bound method from dataclass field)
-        if callable(default_val) and hasattr(default_val, "__self__"):
+        # Only call if this is a default_factory (not a static callable default)
+        if field_info.is_default_factory and callable(default_val):
             return True, default_val()
         return True, default_val
 

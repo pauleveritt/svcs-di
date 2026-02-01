@@ -2,7 +2,7 @@
 
 import asyncio
 import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 import pytest
@@ -503,3 +503,208 @@ def test_create_field_info_returns_field_info_instance():
     )
 
     assert isinstance(result, FieldInfo)
+
+
+# ============================================================================
+# Tests for default_factory resolution
+# ============================================================================
+
+
+def test_default_factory_list():
+    """field(default_factory=list) creates [] not <class 'list'>."""
+
+    @dataclass
+    class ServiceWithList:
+        db: Inject[Database]
+        items: list = field(default_factory=list)
+
+    registry = svcs.Registry()
+    registry.register_value(Database, Database())
+    registry.register_factory(ServiceWithList, auto(ServiceWithList))
+
+    container = svcs.Container(registry)
+    service = container.get(ServiceWithList)
+
+    assert service.items == []
+    assert isinstance(service.items, list)
+    assert service.items is not list  # Should be an instance, not the type
+
+
+def test_default_factory_dict():
+    """field(default_factory=dict) creates {} not <class 'dict'>."""
+
+    @dataclass
+    class ServiceWithDict:
+        db: Inject[Database]
+        config: dict = field(default_factory=dict)
+
+    registry = svcs.Registry()
+    registry.register_value(Database, Database())
+    registry.register_factory(ServiceWithDict, auto(ServiceWithDict))
+
+    container = svcs.Container(registry)
+    service = container.get(ServiceWithDict)
+
+    assert service.config == {}
+    assert isinstance(service.config, dict)
+    assert service.config is not dict  # Should be an instance, not the type
+
+
+def test_default_factory_lambda():
+    """field(default_factory=lambda: [1, 2, 3]) creates [1, 2, 3]."""
+
+    @dataclass
+    class ServiceWithLambda:
+        db: Inject[Database]
+        values: list = field(default_factory=lambda: [1, 2, 3])
+
+    registry = svcs.Registry()
+    registry.register_value(Database, Database())
+    registry.register_factory(ServiceWithLambda, auto(ServiceWithLambda))
+
+    container = svcs.Container(registry)
+    service = container.get(ServiceWithLambda)
+
+    assert service.values == [1, 2, 3]
+    assert isinstance(service.values, list)
+
+
+def test_default_factory_creates_new_instances():
+    """Each resolution creates a new instance from default_factory (not shared)."""
+
+    @dataclass
+    class ServiceWithMutableDefault:
+        items: list = field(default_factory=list)
+
+    registry = svcs.Registry()
+    registry.register_factory(
+        ServiceWithMutableDefault, auto(ServiceWithMutableDefault)
+    )
+
+    # Get two instances using separate containers to avoid svcs caching
+    container1 = svcs.Container(registry)
+    service1 = container1.get(ServiceWithMutableDefault)
+
+    container2 = svcs.Container(registry)
+    service2 = container2.get(ServiceWithMutableDefault)
+
+    # Modify one instance's list
+    service1.items.append("modified")
+
+    # Other instance should not be affected
+    assert service1.items == ["modified"]
+    assert service2.items == []
+    assert service1.items is not service2.items
+
+
+def test_default_factory_function():
+    """field(default_factory=some_function) calls the function."""
+
+    def make_config():
+        return {"env": "test", "debug": True}
+
+    @dataclass
+    class ServiceWithFunctionFactory:
+        db: Inject[Database]
+        config: dict = field(default_factory=make_config)
+
+    registry = svcs.Registry()
+    registry.register_value(Database, Database())
+    registry.register_factory(
+        ServiceWithFunctionFactory, auto(ServiceWithFunctionFactory)
+    )
+
+    container = svcs.Container(registry)
+    service = container.get(ServiceWithFunctionFactory)
+
+    assert service.config == {"env": "test", "debug": True}
+    assert isinstance(service.config, dict)
+
+
+# ============================================================================
+# Integration tests for default_factory with full DI resolution
+# ============================================================================
+
+
+def test_default_factory_integration_nested_services():
+    """Integration test: default_factory works through full DI container resolution."""
+
+    @dataclass
+    class Config:
+        settings: dict = field(default_factory=dict)
+
+    @dataclass
+    class Cache:
+        config: Inject[Config]
+        entries: list = field(default_factory=list)
+
+    @dataclass
+    class Repository:
+        cache: Inject[Cache]
+        queries: list = field(default_factory=list)
+
+    @dataclass
+    class Service:
+        repo: Inject[Repository]
+        handlers: list = field(default_factory=lambda: ["default_handler"])
+
+    registry = svcs.Registry()
+    registry.register_factory(Config, auto(Config))
+    registry.register_factory(Cache, auto(Cache))
+    registry.register_factory(Repository, auto(Repository))
+    registry.register_factory(Service, auto(Service))
+
+    container = svcs.Container(registry)
+    service = container.get(Service)
+
+    # Verify all default_factory fields were properly resolved
+    assert isinstance(service.handlers, list)
+    assert service.handlers == ["default_handler"]
+
+    assert isinstance(service.repo.queries, list)
+    assert service.repo.queries == []
+
+    assert isinstance(service.repo.cache.entries, list)
+    assert service.repo.cache.entries == []
+
+    assert isinstance(service.repo.cache.config.settings, dict)
+    assert service.repo.cache.config.settings == {}
+
+    # Verify we can mutate the lists without issues
+    service.handlers.append("another_handler")
+    service.repo.queries.append("SELECT *")
+    service.repo.cache.entries.append({"key": "value"})
+    service.repo.cache.config.settings["debug"] = True
+
+    assert service.handlers == ["default_handler", "another_handler"]
+    assert service.repo.queries == ["SELECT *"]
+    assert service.repo.cache.entries == [{"key": "value"}]
+    assert service.repo.cache.config.settings == {"debug": True}
+
+
+async def test_default_factory_async():
+    """default_factory works with async resolution."""
+
+    @dataclass
+    class AsyncServiceWithFactory:
+        items: list = field(default_factory=list)
+        config: dict = field(default_factory=lambda: {"async": True})
+
+    registry = svcs.Registry()
+
+    # Register with async factory
+    registry.register_factory(
+        AsyncServiceWithFactory, auto_async(AsyncServiceWithFactory)
+    )
+
+    async with svcs.Container(registry) as container:
+        service = await container.aget(AsyncServiceWithFactory)
+
+        assert isinstance(service.items, list)
+        assert service.items == []
+
+        assert isinstance(service.config, dict)
+        assert service.config == {"async": True}
+
+
+test_default_factory_async = pytest.mark.anyio(test_default_factory_async)

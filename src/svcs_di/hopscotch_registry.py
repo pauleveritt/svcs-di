@@ -126,10 +126,10 @@ class HopscotchRegistry(svcs.Registry):
             >>> registry = HopscotchRegistry()
             >>> # Get or create a list for middleware types
             >>> middleware_types = registry.metadata("myapp.middleware", list)
-            >>> middleware_types.append(LoggingMiddleware)
+            >>> middleware_types.append("LoggingMiddleware")
             >>> # Get or create a dict for component middleware
             >>> component_mw = registry.metadata("myapp.component_mw", dict)
-            >>> component_mw[Button] = {"pre": [logging_mw]}
+            >>> component_mw["Button"] = {"pre": ["logging_mw"]}
         """
         return self._metadata.setdefault(key, default_factory())
 

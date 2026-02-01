@@ -96,15 +96,20 @@
     need the same for containers. Perhaps another function. Perhaps the current function returns a function that can go
     in the registry, and is then looked up when making the container to find all the setup functions.
 
-20. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
+20. [x] Fix default_factory Bug — The library has a bug where it doesn't properly handle `field(default_factory=...)`
+    when instantiating dataclasses through the DI container. The type itself (e.g., `list`) gets passed instead of
+    calling the factory to create an instance (e.g., `[]`). This was discovered when attempting to fix `__post_init__`
+    patterns to use `default_factory`. `S`
+
+21. [ ] Performance Optimization and Benchmarks — Optimize container resolution performance, minimize overhead of
     context/location matching, add benchmarks comparing with plain `svcs` and other DI approaches, document performance
     characteristics and trade-offs. `M`
 
-21. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
+22. [ ] Field Operators and Advanced Features — Implement special dataclass field support for advanced dependency
     features like operators, configuration injection, and enhanced metadata, re-imagined to avoid import-time instance
     construction (perhaps using generics). Keep as optional module. Look in ` `L`
 
-22. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
+23. [ ] Custom Predicates — Hopscatch has other "predicates" for matching and scoring, with a system
     for plugging in custom predicates. `M`
 
 > Notes
